@@ -1,20 +1,19 @@
 #![crate_name = "nes"]
 #![crate_type = "lib"]
 
+use types::{byte, word};
+
 mod cpu;
 mod mem;
 mod types;
 
-pub type word = u16;
-pub type byte = u8;
-
 pub struct NES {
-    num: int
+    num: word
 }
 
 impl NES {
     pub fn new() -> NES {
-        NES{ num: 0xDEADBEEF }
+        NES{ num: 0xBEEF }
     }
 
     pub fn print(&self) {

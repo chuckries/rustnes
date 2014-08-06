@@ -1,5 +1,5 @@
 use mem;
-use {word, byte};
+use types::{byte, word};
 
 struct ProcState {
     //processor registers
