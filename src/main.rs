@@ -1,3 +1,8 @@
+extern crate rustnes;
+
+use rustnes::nes::NES;
+
 fn main() {
-    println!("Hello");
+    let nes = NES::new();
+    nes.print();
 }
