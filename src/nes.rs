@@ -1,11 +1,4 @@
-#![crate_name = "nes"]
-#![crate_type = "lib"]
-
 use types::{byte, word};
-
-mod cpu;
-mod mem;
-mod types;
 
 pub struct NES {
     num: word
