@@ -1,4 +1,5 @@
 use types::{byte, word};
+use cart::Cart;
 
 pub struct NES {
     num: word
@@ -10,6 +11,7 @@ impl NES {
     }
 
     pub fn print(&self) {
+        let cart = Cart::new();
         println!("0x{:X}", self.num);
     }
 }
