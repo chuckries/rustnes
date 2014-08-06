@@ -6,7 +6,8 @@ pub struct NES {
 }
 
 impl NES {
-    pub fn new() -> NES {
+    pub fn new(rom: Path) -> NES {
+        println!("{}", rom.display());
         NES{ num: 0xBEEF }
     }
 
