@@ -22,17 +22,11 @@ pub struct CartHeader {
 
 impl Cart {
     pub fn new(rom: &Path) -> Cart {
-        let mut file = match File::open(rom) {
-            Ok(f) => f,
-            Err(e) => fail!("file error: {}", e)
-        };
+        let mut file = File::open(rom).unwrap();
 
         let mut buf = [0u8, ..0x10];
 
-        let bytes_read = match file.read(buf.as_mut_slice()) {
-            Ok(n) => n,
-            Err(e) => fail!("file read error: {}", e)
-        };
+        let bytes_read = file.read(buf.as_mut_slice()).unwrap();
         
         let mut data: Vec<[byte, ..0x100]> = Vec::new();
 
