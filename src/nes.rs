@@ -2,17 +2,23 @@ use types::{byte, word};
 use cart::Cart;
 
 pub struct NES {
-    num: word
+    rom_path: Path,
+
+    //components
+    cart: Cart
 }
 
 impl NES {
     pub fn new(rom: Path) -> NES {
         println!("{}", rom.display());
-        NES{ num: 0xBEEF }
-    }
 
-    pub fn print(&self) {
-        let cart = Cart::new();
-        println!("0x{:X}", self.num);
+        let cart = Cart::new(&rom);
+
+        NES{ 
+            rom_path: rom,
+
+            cart: cart 
+        }
+
     }
 }
