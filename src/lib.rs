@@ -4,5 +4,4 @@ pub mod nes;
 
 mod cpu;
 mod mem;
-mod types;
 mod cart;

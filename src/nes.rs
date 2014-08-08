@@ -1,4 +1,3 @@
-use types::{byte, word};
 use cart::Cart;
 
 pub struct NES {

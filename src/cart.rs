@@ -1,9 +1,7 @@
 use std::io::{File, Open, Read};
 
-use types::{byte};
-
 pub struct Cart {
-    rom_data: Vec<[byte, ..0x100]>
+    rom_data: Vec<[u8, ..0x100]>
 }
 
 impl Cart {
@@ -14,7 +12,7 @@ impl Cart {
 
       let bytes_read = file.read(buf.as_mut_slice()).unwrap();
 
-      let mut data: Vec<[byte, ..0x100]> = Vec::new();
+      let mut data: Vec<[u8, ..0x100]> = Vec::new();
 
       Cart{ 
           rom_data: data

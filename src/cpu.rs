@@ -1,14 +1,13 @@
 use mem;
-use types::{byte, word};
 
 struct ProcState {
     //processor registers
-    PC: word,    //Program Counter
-    A: byte,     //Accumulator
-    X: byte,     //Index Register X
-    Y: byte,     //Index Register Y
-    SP: byte,    //Stack Pointer
-    P: byte,     //Status Register
+    PC: u16,    //Program Counter
+    A:  u8,     //Accumulator
+    X:  u8,     //Index Register X
+    Y:  u8,     //Index Register Y
+    SP: u8,     //Stack Pointer
+    P:  u8,     //Status Register
 }
 
 pub fn run() {
