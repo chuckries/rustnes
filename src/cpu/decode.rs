@@ -1,18 +1,6 @@
-use mem;
+pub struct Intruction(Instr, AddressMode);
 
-struct ProcState {
-    //processor registers
-    PC: u16,    //Program Counter
-    A:  u8,     //Accumulator
-    X:  u8,     //Index Register X
-    Y:  u8,     //Index Register Y
-    SP: u8,     //Stack Pointer
-    P:  u8,     //Status Register
-}
-
-struct Intruction(Instr, AddressMode);
-
-enum Instr {
+pub enum Instr {
     ADC,
     AND,
     ASL,
@@ -73,7 +61,7 @@ enum Instr {
     INSTR_NONE
 }
 
-enum AddressMode {
+pub enum AddressMode {
     ZP,     //Zero Page             AND $12
     IZP,    //Indexed ZeroPage      AND $12,X       LDX $12,Y
     ABS,    //Asolute               AND $1234
@@ -89,7 +77,7 @@ enum AddressMode {
     ADDRESS_MODE_NONE
 }
 
-fn decode(opcode: u8) -> Option<Intruction> {
+pub fn decode(opcode: u8) -> Option<Intruction> {
     let (instr, mode) = decode_impl(opcode);
 
     match (instr, mode) {
@@ -105,9 +93,4 @@ fn decode_impl(opcode: u8) -> (Instr, AddressMode)
         _ => (INSTR_NONE, ADDRESS_MODE_NONE)
     }
 
-}
-
-pub fn run() {
-    mem::read();
-    mem::write();
 }
