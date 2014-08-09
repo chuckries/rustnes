@@ -1,4 +1,4 @@
-use cart::Cart;
+use cart::{Cart};
 
 pub struct NES {
     rom_path: Path,

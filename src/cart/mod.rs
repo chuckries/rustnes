@@ -9,6 +9,8 @@ static CHR_ROM_BANK_SIZE: uint = 8 * 1024; //8 KB
 
 #[packed]
 struct CartHeader {
+    //TODO These don't all need to be public
+    //currenlty it is just for testing, which will change
     pub identifier: [u8, ..4], // NES^
     pub prg_rom_count: u8, // in 16KB units
     pub chr_rom_count: u8, // in 8KB units
@@ -21,8 +23,9 @@ struct CartHeader {
 }
 
 impl CartHeader {
-    pub fn new(bytes: &[u8, ..16]) -> Option<CartHeader> {
+    pub fn new(bytes: &[u8, ..0x10]) -> Option<CartHeader> {
         let cart_header: &CartHeader;
+
         unsafe {
             cart_header = mem::transmute(bytes.as_ptr());
         }
@@ -35,26 +38,31 @@ impl CartHeader {
     }
 
     fn is_valid(&self) -> bool {
-       false 
+        //TODO Implement this mofo, too lazy right now
+        true
     }
 }
 
 pub struct Cart {
-    rom_data: Vec<[u8, ..0x100]>
+    header: CartHeader,
+    rom_data: Vec<[u8, ..0x100]>,
 }
 
 impl Cart {
     pub fn new(rom: &Path) -> Cart {
         let mut file = File::open(rom).unwrap();
 
+        //get the header info
         let mut buf = [0u8, ..0x10];
-
-        let bytes_read = file.read(buf.as_mut_slice()).unwrap();
+        let bytes_read = file.read(buf).unwrap();
+        let header = CartHeader::new(&buf).unwrap();
         
+        //TODO read rest of the binary
         let mut data: Vec<[u8, ..0x100]> = Vec::new();
 
         Cart{ 
-            rom_data: data
+            header: header,
+            rom_data: data,
         }
     }
 }
