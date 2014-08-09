@@ -6,15 +6,6 @@ impl Instruction {
     }
 }
 
-fn decode(opcode: u8) -> Option<Instruction> {
-    let (instr, mode) = decode_impl(opcode);
-
-    match (instr, mode) {
-        (INSTR_NONE, ADDRESS_MODE_NONE) => None,
-        (x, y) => Some(Instruction(x,y))
-    }
-}
-
 //so this macro doesn't actually work, but leave it in for now
 //this could be used to expand out alu instructions easily in the match statement
 macro_rules! alu_inst(
@@ -30,23 +21,28 @@ macro_rules! alu_inst(
     );
 )
 
-fn decode_impl(opcode: u8) -> (Instr, AddressMode)
+fn decode(opcode: u8) -> Option<Instruction>
 {
-    match opcode {
-        0x00 => (BRK, IMP),
+    let (instr, mode) = 
+        match opcode {
+            0x00 => (BRK, IMP),
 
-        0x69 => (ADC, IMM),
-        0x65 => (ADC, ZP),
-        0x75 => (ADC, ZPX),
-        0x6D => (ADC, ABS),
-        0x7D => (ADC, ABSX),
-        0x79 => (ADC, ABSY),
-        0x61 => (ADC, INDX),
-        0x71 => (ADC, INDY),
+            0x69 => (ADC, IMM),
+            0x65 => (ADC, ZP),
+            0x75 => (ADC, ZPX),
+            0x6D => (ADC, ABS),
+            0x7D => (ADC, ABSX),
+            0x79 => (ADC, ABSY),
+            0x61 => (ADC, INDX),
+            0x71 => (ADC, INDY),
 
-        _ => (INSTR_NONE, ADDRESS_MODE_NONE)
+            _ => (INSTR_NONE, ADDRESS_MODE_NONE)
+        };
+
+    match (instr, mode) {
+        (INSTR_NONE, ADDRESS_MODE_NONE) => None,
+        (x, y) => Some(Instruction(x, y))
     }
-
 }
 
 pub enum Instr {
