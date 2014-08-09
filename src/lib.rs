@@ -7,4 +7,4 @@ pub mod nes;
 
 mod cpu;
 mod mem;
-pub mod cart;
+mod cart;
