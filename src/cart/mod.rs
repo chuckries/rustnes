@@ -6,20 +6,24 @@ mod test;
 
 static PRG_ROM_BANK_SIZE: uint = 16 * 1024; //16 KB
 static CHR_ROM_BANK_SIZE: uint = 8 * 1024; //8 KB
+static PRG_RAM_BANK_SIZE: uint = 8 * 1024; //8 KB
+static TRAINER_SIZE: uint = 512;
 
 #[packed]
 struct CartHeader {
-    //TODO These don't all need to be public
-    //currenlty it is just for testing, which will change
-    pub identifier: [u8, ..4], // NES^
+    identifier: [u8, ..4], // NES^
     pub prg_rom_count: u8, // in 16KB units
     pub chr_rom_count: u8, // in 8KB units
-    pub flags_6: u8,
-    pub flags_7: u8,
+    flags_6: u8,
+    flags_7: u8,
     pub prg_ram_count: u8, // in 8KB, minimum 8KB for compat
-    pub flags_9: u8,
-    pub flags_10: u8,
+    flags_9: u8,
+    flags_10: u8,
     pub zeros: [u8, ..5],
+}
+
+fn is_flag_set(flags: u8, flag: u8) -> bool {
+    flags & flag != 0
 }
 
 impl CartHeader {
@@ -38,14 +42,27 @@ impl CartHeader {
     }
 
     fn is_valid(&self) -> bool {
-        //TODO Implement this mofo, too lazy right now
+        static MSDOS_EOF: u8 = 0x1a;
+
+        if self.identifier != ['N' as u8, 'E' as u8, 'S' as u8, MSDOS_EOF] { return false; }
+        if self.zeros != [0u8, ..5] { return false; }
+
         true
+    }
+
+
+    pub fn has_trainer(&self) -> bool {
+        is_flag_set(self.flags_6, 1 << 3)
     }
 }
 
 pub struct Cart {
     header: CartHeader,
-    rom_data: Vec<[u8, ..0x100]>,
+    prg_rom: Vec<[u8, ..PRG_ROM_BANK_SIZE]>,
+    chr_rom: Vec<[u8, ..CHR_ROM_BANK_SIZE]>,
+
+    //trainer not yet supported, mostly because I don't know what it is
+    _trainer: [u8, ..TRAINER_SIZE],
 }
 
 impl Cart {
@@ -54,15 +71,35 @@ impl Cart {
 
         //get the header info
         let mut buf = [0u8, ..0x10];
-        let bytes_read = file.read(buf).unwrap();
-        let header = CartHeader::new(&buf).unwrap();
-        
-        //TODO read rest of the binary
-        let mut data: Vec<[u8, ..0x100]> = Vec::new();
+        file.read(buf);
+        let header = CartHeader::new(&buf).expect("Bad header");
+
+        //read the prg_rom
+        let mut prg_rom = Vec::new();
+        for _ in range(0, header.prg_rom_count) {
+            let mut buf = [0u8, ..PRG_ROM_BANK_SIZE];
+            file.read(buf);
+            prg_rom.push(buf);
+        }
+
+        //read the chr_rom
+        let mut chr_rom = Vec::new();
+        for _ in range(0, header.chr_rom_count) {
+            let mut buf = [0u8, ..CHR_ROM_BANK_SIZE];
+            file.read(buf);
+            chr_rom.push(buf);
+        }
+
+        let mut trainer = [0u8, ..TRAINER_SIZE];
+        if header.has_trainer() {
+            file.read(trainer);
+        }
 
         Cart{ 
             header: header,
-            rom_data: data,
+            prg_rom: prg_rom,
+            chr_rom: chr_rom,
+            _trainer: trainer,
         }
     }
 }
