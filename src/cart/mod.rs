@@ -50,9 +50,12 @@ impl CartHeader {
         true
     }
 
-
     pub fn has_trainer(&self) -> bool {
-        is_flag_set(self.flags_6, 1 << 3)
+        is_flag_set(self.flags_6, 1 << 2)
+    }
+
+    pub fn has_sram(&self) -> bool {
+        is_flag_set(self.flags_6, 1 << 1)
     }
 }
 
@@ -90,6 +93,7 @@ impl Cart {
             chr_rom.push(buf);
         }
 
+        //read trainer if present
         let mut trainer = [0u8, ..TRAINER_SIZE];
         if header.has_trainer() {
             file.read(trainer);

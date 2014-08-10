@@ -3,6 +3,7 @@ use self::isa::Instruction;
 
 mod isa;
 
+#[allow(uppercase_variables)]
 struct ProcState {
     //processor registers
     pub PC: u16,    //Program Counter

@@ -1,5 +1,3 @@
-use std::io::IoResult;
-
 pub struct Mem;
 
 impl Mem {

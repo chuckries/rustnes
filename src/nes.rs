@@ -15,11 +15,11 @@ impl Nes {
     pub fn new(rom_path: Path) -> Nes {
         println!("{}", rom_path.display());
 
-        let cpu = Cpu::new();
         let cart = Cart::new(&rom_path);
         let mem = Mem::new();
+        let cpu = Cpu::new();
 
-        Nes{ 
+        Nes { 
             rom_path: rom_path,
 
             cpu: cpu, 
