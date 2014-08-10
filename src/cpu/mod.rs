@@ -33,14 +33,8 @@ impl Cpu {
 
     pub fn run(&mut self, mem: &Mem) {
         let &mut state = &self.state;
-        let opcode = read(state.PC);
+        let opcode = mem.read(state.PC);
         let instr = Instruction::new(opcode).unwrap();
         instr.run(mem);
     }
-}
-
-//simple prototype so I can write around a reader
-//not permament
-fn read(addr: u16) -> u8 {
-    0x00
 }

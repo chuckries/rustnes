@@ -6,10 +6,9 @@ impl Mem {
     pub fn new() -> Mem {
         Mem
     }
-}
 
-impl Reader for Mem {
-    fn read(&mut self, buf: &mut[u8]) -> IoResult<uint> {
-        return Ok(buf.len());
+    pub fn read(&self, addr: u16) -> u8 {
+        0u8
     }
 }
+

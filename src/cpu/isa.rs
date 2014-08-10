@@ -1,3 +1,5 @@
+use mem::Mem;
+
 pub struct Instruction(Instr, AddressMode);
 
 impl Instruction {
@@ -5,7 +7,7 @@ impl Instruction {
         decode(opcode)
     }
 
-    pub fn run<T: Reader>(&self, mem: &T) {
+    pub fn run(&self, mem: &Mem) {
 
     }
 }
