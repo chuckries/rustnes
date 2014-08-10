@@ -1,7 +1,7 @@
 use mem;
-use self::decode::Instruction;
+use self::isa::Instruction;
 
-mod decode;
+mod isa;
 
 struct ProcState {
     //processor registers

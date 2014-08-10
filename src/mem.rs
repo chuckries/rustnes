@@ -1,7 +1,15 @@
+use std::io::IoResult;
 
+pub struct Mem;
 
-pub fn read() {
+impl Mem {
+    pub fn new() -> Mem {
+        Mem
+    }
 }
 
-pub fn write() {
+impl Reader for Mem {
+    fn read(&mut self, buf: &mut[u8]) -> IoResult<uint> {
+        return Ok(buf.len());
+    }
 }

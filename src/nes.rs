@@ -1,23 +1,33 @@
+use cpu::{Cpu};
 use cart::{Cart};
+use mem::{Mem};
 
-pub struct NES {
+pub struct Nes {
     rom_path: Path,
 
     //components
-    cart: Cart
+    cpu: Cpu,
+    cart: Cart,
+    mem: Mem,
 }
 
-impl NES {
-    pub fn new(rom: Path) -> NES {
-        println!("{}", rom.display());
+impl Nes {
+    pub fn new(rom_path: Path) -> Nes {
+        println!("{}", rom_path.display());
 
-        let cart = Cart::new(&rom);
+        let cpu = Cpu::new();
+        let cart = Cart::new(&rom_path);
+        let mem = Mem::new();
 
-        NES{ 
-            rom_path: rom,
+        Nes{ 
+            rom_path: rom_path,
 
-            cart: cart 
+            cpu: cpu, 
+            cart: cart,
+            mem: mem,
         }
+    }
 
+    pub fn run(&self) {
     }
 }

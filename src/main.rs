@@ -1,6 +1,6 @@
 extern crate rustnes;
 
-use rustnes::nes::NES;
+use rustnes::nes::Nes;
 
 use std::os;
 
@@ -14,6 +14,8 @@ fn main() {
             "mario.nes"
         };
 
-    let path: Path = Path::new(filename);
-    let nes: NES = NES::new(path);
+    let path = Path::new(filename);
+    let nes = Nes::new(path);
+
+    nes.run();
 }

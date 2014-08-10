@@ -4,6 +4,10 @@ impl Instruction {
     pub fn new(opcode: u8) -> Option<Instruction> {
         decode(opcode)
     }
+
+    pub fn run<T: Reader>(mem: &T) {
+
+    }
 }
 
 //so this macro doesn't actually work, but leave it in for now
@@ -23,7 +27,7 @@ macro_rules! alu_inst(
 
 fn decode(opcode: u8) -> Option<Instruction>
 {
-    let (instr, mode) = 
+    let (instr, mode) =
         match opcode {
             0x00 => (BRK, IMP),
 
@@ -46,72 +50,49 @@ fn decode(opcode: u8) -> Option<Instruction>
 }
 
 pub enum Instr {
-    ADC,
-    AND,
-    ASL,
-    BCC,
-    BCS,
-    BEQ,
-    BIT,
-    BMI,
-    BNE,
-    BPL,
-    BRK,
-    BVC,
-    BVS,
-    CLC,
-    CLD,
-    CLI,
-    CLV,
-    CMP,
-    CPX,
-    CPY,
-    DEC,
-    DEX,
-    DEY,
-    EOR,
-    INC,
-    INX,
-    INY,
-    JMP,
-    JSR,
-    LDA,
-    LDX,
-    LDY,
-    LSR,
-    NOP,
-    ORA,
-    PHA,
-    PHP,
-    PLA,
-    PLP,
-    ROL,
-    ROR,
-    RTI,
-    RTS,
-    SBC,
-    SEC,
-    SED,
-    SEI,
-    STA,
-    STX,
-    STY,
-    TAX,
-    TAY,
-    TSX,
-    TXA,
-    TXS,
-    TYA,
+    //Load and Store
+    LDA, LDX, LDY, STA, STX, STY,
 
-    INSTR_NONE
+    //Arithmetic
+    ADC, SBC, INC, INX, INY, DEC, DEX, DEY,
+
+    //Shift and Rotate
+    ASL, LSR, ROL, ROR,
+
+    //Logic
+    AND, ORA, EOR,
+
+    //Compare and Test Bit
+    CMP, CPX, CPY, BIT,
+
+    //Bracnh
+    BCC, BCS, BEQ, BMI, BNE, BPL, BVC, BVS,
+
+    //Transfer
+    TAX, TXA, TAY, TYA, TSX, TXS,
+
+    //Stack
+    PHA, PLA, PHP, PLP,
+
+    //Subroutines and Jump
+    JMP, JSR, RTS, RTI,
+
+    //Set and Clear
+    SEC, SED, SEI, CLC, CLD, CLI, CLV,
+
+    //Miscellaneous
+    NOP, BRK,
+
+    //Undefined
+    INSTR_NONE,
 }
 
 pub enum AddressMode {
     ZP,     //Zero Page             AND $12
-    ZPX,    //Indexed ZeroPage X    AND $12,X       
+    ZPX,    //Indexed ZeroPage X    AND $12,X
     ZPY,    //Indexed ZeroPage Y    LDX $12,Y
     ABS,    //Asolute               AND $1234
-    ABSX,   //Indexed Absolute X    AND $1234,X     
+    ABSX,   //Indexed Absolute X    AND $1234,X
     ABSY,   //Indexed Absolute Y    AND $1234,Y
     IND,    //Indirect              JMP ($1234)
     IMP,    //Implied               CLD
@@ -121,5 +102,5 @@ pub enum AddressMode {
     INDX,   //Indexed Indirect      AND ($12,X)
     INDY,   //Indirect Indexed      AND ($12),Y
 
-    ADDRESS_MODE_NONE
+    ADDRESS_MODE_NONE,
 }
