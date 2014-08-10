@@ -1,4 +1,4 @@
-use mem;
+use mem::{Mem};
 use self::isa::Instruction;
 
 mod isa;
@@ -31,10 +31,11 @@ impl Cpu {
         Cpu { state: proc_state }
     }
 
-    pub fn run(&mut self) {
+    pub fn run(&mut self, mem: &Mem) {
         let &mut state = &self.state;
         let opcode = read(state.PC);
-        let instr = Instruction::new(opcode);
+        let instr = Instruction::new(opcode).unwrap();
+        instr.run(mem);
     }
 }
 

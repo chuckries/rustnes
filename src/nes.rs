@@ -28,6 +28,7 @@ impl Nes {
         }
     }
 
-    pub fn run(&self) {
+    pub fn run(&mut self) {
+        self.cpu.run(&self.mem);
     }
 }

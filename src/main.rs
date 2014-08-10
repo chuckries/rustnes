@@ -15,7 +15,7 @@ fn main() {
         };
 
     let path = Path::new(filename);
-    let nes = Nes::new(path);
+    let mut nes = Nes::new(path);
 
     nes.run();
 }

@@ -5,7 +5,7 @@ impl Instruction {
         decode(opcode)
     }
 
-    pub fn run<T: Reader>(mem: &T) {
+    pub fn run<T: Reader>(&self, mem: &T) {
 
     }
 }
