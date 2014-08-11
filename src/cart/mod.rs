@@ -4,9 +4,9 @@ use std::mem;
 #[cfg(test)]
 mod test;
 
-static PRG_ROM_BANK_SIZE: uint = 16 * 1024; //16 KB
-static CHR_ROM_BANK_SIZE: uint = 8 * 1024;  //8 KB
-static PRG_RAM_BANK_SIZE: uint = 8 * 1024;  //8 KB
+static PRG_ROM_BANK_SIZE: uint = 0x4000; //16 KB
+static CHR_ROM_BANK_SIZE: uint = 0x2000; //8 KB
+static PRG_RAM_BANK_SIZE: uint = 0x2000; //8 KB
 static TRAINER_SIZE: uint = 512;
 
 #[packed]
@@ -105,5 +105,15 @@ impl Cart {
             chr_rom: chr_rom,
             _trainer: trainer,
         }
+    }
+
+    pub fn read_from_lower_bank(&self, addr: u16) -> u8 {
+        //TODO mapper support isn't planned for a long time, so just read from bank 0
+        self.prg_rom[0][addr as uint]
+    }
+
+    pub fn read_from_upper_bank(&self, addr: u16) -> u8 {
+        //TODO mapper support isn't planned for a long time, so just read from bank 1
+        self.prg_rom[1][addr as uint]
     }
 }
