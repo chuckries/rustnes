@@ -16,10 +16,12 @@ struct ProcState {
 
 pub struct Cpu {
     state: ProcState,
+
+    mem: Mem,
 }
 
 impl Cpu {
-    pub fn new() -> Cpu {
+    pub fn new(mem: Mem) -> Cpu {
         let proc_state = ProcState {
             PC: 0x000,
             A:  0x00,
@@ -29,13 +31,17 @@ impl Cpu {
             P:  0x00,
         };
 
-        Cpu { state: proc_state }
+        Cpu { 
+            state: proc_state,
+
+            mem: mem,
+        }
     }
 
-    pub fn run(&mut self, mem: &Mem) {
+    pub fn run(&mut self) {
         let &mut state = &self.state;
-        let opcode = mem.read(state.PC);
+        let opcode = self.mem.read(state.PC);
         let instr = Instruction::new(opcode).unwrap();
-        instr.run(mem);
+        instr.run(&self.mem);
     }
 }

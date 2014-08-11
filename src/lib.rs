@@ -1,7 +1,7 @@
 #![crate_name = "rustnes"]
+#![feature(phase, macro_rules)]
 
-#![feature(macro_rules)]
-#![feature(log_syntax)]
+#[phase(plugin, link)] extern crate log;
 
 pub mod nes;
 
