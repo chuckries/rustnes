@@ -5,8 +5,8 @@ use std::mem;
 mod test;
 
 static PRG_ROM_BANK_SIZE: uint = 16 * 1024; //16 KB
-static CHR_ROM_BANK_SIZE: uint = 8 * 1024; //8 KB
-static PRG_RAM_BANK_SIZE: uint = 8 * 1024; //8 KB
+static CHR_ROM_BANK_SIZE: uint = 8 * 1024;  //8 KB
+static PRG_RAM_BANK_SIZE: uint = 8 * 1024;  //8 KB
 static TRAINER_SIZE: uint = 512;
 
 #[packed]
