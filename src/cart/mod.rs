@@ -9,6 +9,45 @@ static CHR_ROM_BANK_SIZE: uint = 0x2000; //8 KB
 static PRG_RAM_BANK_SIZE: uint = 0x2000; //8 KB
 static TRAINER_SIZE: uint = 512;
 
+/// # Header flags
+///
+/// Adapted from http://wiki.nesdev.com/w/index.php/INES
+///
+/// ## Flags 6
+///
+/// 76543210
+/// ||||||||
+/// ||||+||+- 0xx0: vertical arrangement/horizontal mirroring (CIRAM A10 = PPU A11)
+/// |||| ||   0xx1: horizontal arrangement/vertical mirroring (CIRAM A10 = PPU A10)
+/// |||| ||   1xxx: four-screen VRAM
+/// |||| |+-- 1: SRAM in CPU $6000-$7FFF, if present, is battery backed
+/// |||| +--- 1: 512-byte trainer at $7000-$71FF (stored before PRG data)
+/// ++++----- Lower nybble of mapper number
+///
+/// ## Flags 7
+///
+/// 76543210
+/// ||||||||
+/// |||||||+- VS Unisystem
+/// ||||||+-- PlayChoice-10 (8KB of Hint Screen data stored after CHR data)
+/// ||||++--- If equal to 2, flags 8-15 are in NES 2.0 format
+/// ++++----- Upper nybble of mapper number
+///
+/// ## Flags 9
+///
+/// 76543210
+/// ||||||||
+/// |||||||+- TV system (0: NTSC; 1: PAL)
+/// +++++++-- Reserved, set to zero
+///
+/// ## Flags 10
+///
+/// 76543210
+///   ||  ||
+///   ||  ++- TV system (0: NTSC; 2: PAL; 1/3: dual compatible)
+///   |+----- SRAM in CPU $6000-$7FFF is 0: present; 1: not present
+///   +------ 0: Board has no bus conflicts; 1: Board has bus conflicts
+
 #[packed]
 struct CartHeader {
     identifier: [u8, ..4], // NES^
