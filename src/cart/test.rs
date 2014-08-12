@@ -16,7 +16,7 @@ static TEST_ROM_HEADER: [u8, ..16] = [
     0x00, 0x00, 0x00, 0x00, 0x00,
 ];
 
-fn get_empty_header() -> CartHeader {
+pub fn get_empty_header() -> CartHeader {
     CartHeader {
         identifier:     [0u8, ..4],
         prg_rom_count:  0u8,
@@ -30,7 +30,7 @@ fn get_empty_header() -> CartHeader {
     }
 }
 
-fn get_empty_cart() -> Cart {
+pub fn get_empty_cart() -> Cart {
     let hdr = get_empty_header();
 
     Cart {

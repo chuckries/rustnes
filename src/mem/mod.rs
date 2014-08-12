@@ -32,14 +32,15 @@
 
 use cart::Cart;
 
+#[cfg(test)]
+mod test;
+
 static RAM_SIZE: uint = 0x0800; //2 KB
 
 pub struct Mem {
     //used for reading PRG_ROM (and others?) from the cartridge
     cart: Cart, 
-
     ram: [u8, ..RAM_SIZE],
-
 }
 
 impl Mem {
@@ -61,14 +62,14 @@ impl Mem {
             //TODO calls into PPU at this point
             //TODO several of these registers are read only
             match address {
-                0 => { 0 } //PPU Control Register 1
-                1 => { 0 } //PPU Control Register 2
-                2 => { 0 } //PPU Status Register
-                3 => { 0 } //SPR-RAM Address Register
-                4 => { 0 } //SPR-RAM I/O Register
-                5 => { 0 } //VRAM Address Register 1
-                6 => { 0 } //VRAM Address Register 2
-                7 => { 0 } //VRAM I/O Register
+                0 => { 0x11 } //PPU Control Register 1
+                1 => { 0x22 } //PPU Control Register 2
+                2 => { 0x33 } //PPU Status Register
+                3 => { 0x44 } //SPR-RAM Address Register
+                4 => { 0x55 } //SPR-RAM I/O Register
+                5 => { 0x66 } //VRAM Address Register 1
+                6 => { 0x77 } //VRAM Address Register 2
+                7 => { 0x88 } //VRAM I/O Register
                 _ => { error!("Impossible"); 0x00 }
             }
         } else if virtual_address < 0x4020 {

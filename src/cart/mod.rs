@@ -2,7 +2,7 @@ use std::io::File;
 use std::mem;
 
 #[cfg(test)]
-mod test;
+pub mod test;
 
 static PRG_ROM_BANK_SIZE: uint = 0x4000; //16 KB
 static CHR_ROM_BANK_SIZE: uint = 0x2000; //8 KB
