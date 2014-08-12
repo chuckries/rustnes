@@ -8,3 +8,9 @@ pub mod nes;
 mod cpu;
 mod mem;
 mod cart;
+
+#[cfg(test)]
+mod test {
+    mod test {
+    }
+}

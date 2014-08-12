@@ -54,7 +54,7 @@ impl Mem {
     //TODO lots
     pub fn read_byte(&self, virtual_address: u16) -> u8 {
         if virtual_address < 0x2000 {
-            let address: uint = (virtual_address as uint) & 0x07FFF; //Mirrored after 0x0800
+            let address: uint = (virtual_address as uint) & 0x07FF; //Mirrored after 0x0800
             self.ram[address]
         } else if virtual_address < 0x4000 {
             let address: uint = (virtual_address as uint) & 0x0007; //Mirrored after 0x2008

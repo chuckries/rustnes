@@ -80,7 +80,7 @@ pub struct Cpu {
 impl Cpu {
     pub fn new(mem: Mem) -> Cpu {
         let cpu_state = CpuState {
-            PC: 0x000,
+            PC: 0x0000,
             A:  0x00,
             X:  0x00,
             Y:  0x00,
@@ -90,7 +90,6 @@ impl Cpu {
 
         Cpu { 
             state: cpu_state,
-
             mem: mem,
         }
     }
@@ -106,6 +105,10 @@ impl Cpu {
         //get the memory address referenced by this instr
         let m_addr = self.instr_mem_addr(instr.address_mode);
 
+        0
+    }
+
+    pub fn instr_exec(&mut self) -> u8 {
         0
     }
 
