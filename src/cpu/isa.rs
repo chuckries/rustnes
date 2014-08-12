@@ -1,14 +1,14 @@
 use mem::Mem;
+use cpu::CpuState;
 
-pub struct Instruction(Instr, AddressMode);
+pub struct Instruction {
+    pub instr: Instr,
+    pub address_mode: AddressMode
+}
 
 impl Instruction {
     pub fn new(opcode: u8) -> Option<Instruction> {
         decode(opcode)
-    }
-
-    pub fn run(&self, mem: &Mem) {
-
     }
 }
 
@@ -47,7 +47,7 @@ fn decode(opcode: u8) -> Option<Instruction>
 
     match (instr, mode) {
         (INSTR_NONE, ADDRESS_MODE_NONE) => None,
-        (x, y) => Some(Instruction(x, y))
+        (x, y) => Some(Instruction { instr: x, address_mode: y })
     }
 }
 
@@ -105,4 +105,34 @@ pub enum AddressMode {
     INDY,   //Indirect Indexed      AND ($12),Y
 
     ADDRESS_MODE_NONE,
+}
+
+#[cfg(test)]
+mod test {
+
+    use cpu::isa::*;
+
+    #[test]
+    fn isa_test() {
+        let address_mode: AddressMode = ZP;
+
+        let x: u8 = 
+            match address_mode {
+                ZP => 0,
+                ZPX => 0,
+                ZPY => 0,
+                ABS => 0,
+                ABSX => 0,
+                ABSY => 0,
+                IND => 0,
+                IMP => 0,
+                ACC => 0,
+                IMM => 0,
+                REL => 0,
+                INDX => 0,
+                INDY => 0,
+
+                ADDRESS_MODE_NONE => 0,
+            };
+    }
 }

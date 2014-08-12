@@ -1,5 +1,5 @@
 #![crate_name = "rustnes"]
-#![feature(phase, macro_rules)]
+#![feature(phase, macro_rules, globs)]
 
 #[phase(plugin, link)] extern crate log;
 
