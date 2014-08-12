@@ -1,8 +1,13 @@
+#![macro_escape]
+
 use std::io::File;
 use std::mem;
 
 #[cfg(test)]
 pub mod test;
+
+pub type PrgRomBank = [u8, ..PRG_ROM_BANK_SIZE];
+pub type PrgRom = Vec<PrgRomBank>;
 
 static PRG_ROM_BANK_SIZE: uint = 0x4000; //16 KB
 static CHR_ROM_BANK_SIZE: uint = 0x2000; //8 KB

@@ -30,17 +30,21 @@
 //! | Zero Page     |       |               |
 //! |_______________| $0000 |_______________|
 
+#![macro_escape]
+
 use cart::Cart;
 
 #[cfg(test)]
 pub mod test;
+
+pub type Ram = [u8, ..RAM_SIZE];
 
 static RAM_SIZE: uint = 0x0800; //2 KB
 
 pub struct Mem {
     //used for reading PRG_ROM (and others?) from the cartridge
     cart: Cart, 
-    ram: [u8, ..RAM_SIZE],
+    ram: Ram,
 }
 
 impl Mem {

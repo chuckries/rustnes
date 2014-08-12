@@ -3,11 +3,12 @@
 
 #[phase(plugin, link)] extern crate log;
 
-pub mod nes;
 
-mod cpu;
-mod mem;
 mod cart;
+mod mem;
+mod cpu;
+
+pub mod nes;
 
 #[cfg(test)]
 mod test {

@@ -1,4 +1,7 @@
+#![macro_escape]
+
 use cart::{Cart, CartHeader};
+use cart::{PrgRomBank, PrgRom};
 use cart::{PRG_ROM_BANK_SIZE, CHR_ROM_BANK_SIZE};
 use cart::{PRG_RAM_BANK_SIZE, TRAINER_SIZE};
 
@@ -16,7 +19,43 @@ static TEST_ROM_HEADER: [u8, ..16] = [
     0x00, 0x00, 0x00, 0x00, 0x00,
 ];
 
-pub fn get_empty_header() -> CartHeader {
+macro_rules! cart_header(
+    () => ( //Used as 'cart_header!()' to get an empty header
+        get_empty_cart_header()
+    );
+)
+
+macro_rules! cart(
+    () => ( //Used as 'cart!()' to get an empty cart
+        get_empty_cart()
+    );
+    ($prg_rom:expr) => ( //Used as 'cart!(prg_rom)' to get a cart initialized with prg_rom
+        get_cart_with_prg_rom($prg_rom)
+    );
+)
+
+macro_rules! prg_rom(
+    () => ( //used as 'prg_rom!()' to get a vec of two empty prg_rom banks
+        get_empty_prg_rom()
+    );
+    ($($e:expr),*) => ({
+        let mut _temp = Vec::new();
+        $(_temp.push($e);)*
+        _temp
+    });
+    ($($e:expr),+,) => (prg_rom!($($e),+))
+)
+
+macro_rules! prg_rom_bank(
+    () => ( //used as 'prg_rom_bank!()' to get an empty static array of size PRG_ROM_BANK_SIZE
+        get_empty_prg_rom_bank()
+    );
+    ($init:expr) => ( //used as 'prg_rom_bank!(0xAA)' to get a static array of size PRG_ROM_BANK_SIZE with every entry initalized to 0xAA
+        get_initialized_prg_rom_bank($init)
+    );
+)
+
+pub fn get_empty_cart_header() -> CartHeader {
     CartHeader {
         identifier:     [0u8, ..4],
         prg_rom_count:  0u8,
@@ -31,22 +70,30 @@ pub fn get_empty_header() -> CartHeader {
 }
 
 pub fn get_empty_cart() -> Cart {
-    let hdr = get_empty_header();
+    let hdr = cart_header!();
 
     Cart {
         header: hdr,
-        prg_rom: get_empty_prg_rom(),
+        prg_rom: prg_rom!(),
         chr_rom: Vec::from_fn(1, |_| [0u8, ..CHR_ROM_BANK_SIZE]),
         _trainer: [0u8, ..TRAINER_SIZE],
     }
 }
 
-pub fn get_empty_prg_rom() -> Vec<[u8, ..PRG_ROM_BANK_SIZE]> {
-    Vec::from_fn(2, |_| [0u8, ..PRG_ROM_BANK_SIZE])
+pub fn get_empty_prg_rom_bank() -> PrgRomBank {
+    [0u8, ..PRG_ROM_BANK_SIZE]
 }
 
-pub fn get_cart_with_prg_rom(prg_rom: Vec<[u8, ..PRG_ROM_BANK_SIZE]>) -> Cart {
-    let mut cart = get_empty_cart();
+pub fn get_initialized_prg_rom_bank(init: u8) -> PrgRomBank {
+    [init, ..PRG_ROM_BANK_SIZE]
+}
+
+pub fn get_empty_prg_rom() -> PrgRom {
+    Vec::from_fn(2, |_| prg_rom_bank!())
+}
+
+pub fn get_cart_with_prg_rom(prg_rom: PrgRom) -> Cart {
+    let mut cart = cart!();
     cart.prg_rom = prg_rom;
     cart
 }
@@ -78,17 +125,16 @@ fn cart_header_is_valid_test() {
     let bad_hdr = CartHeader::new(&bad_hdr_bytes);
     assert!(bad_hdr.is_none());
 
-    let bad_hdr = get_empty_header();
+    let bad_hdr = cart_header!();
     assert_eq!(bad_hdr.is_valid(), false);
 }
 
 #[test]
 fn cart_read_default_prg_rom_banks_test() {
-    let mut cart = get_empty_cart();
+    let prg_rom = vec![prg_rom_bank!(0xAA), prg_rom_bank!(0xBB)];
 
-    let prg_rom = vec![[0xAA, ..PRG_ROM_BANK_SIZE], [0xBB, ..PRG_ROM_BANK_SIZE]];
-    cart.prg_rom = prg_rom;
-    for i in range(0, PRG_ROM_BANK_SIZE as u16) {
+    let cart = cart!(prg_rom);
+    for i in range(0, cart.prg_rom.len() as u16) {
         assert_eq!(cart.read_from_lower_bank(i), 0xAA as u8);
         assert_eq!(cart.read_from_upper_bank(i), 0xBB as u8);
     }

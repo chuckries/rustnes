@@ -88,17 +88,17 @@ impl Cpu {
                 let indirect_address: u16 = self.read_pc_word();
                 self.mem.read_word(indirect_address)
             }
-            isa::IMP     => 0, //implied, no memory reference
-            isa::ACC     => 0, //accumulator, no memory reference
-            isa::IMM     => 0, //immediate, pull the bytes somewhere else
-            isa::REL     => 0, //relative, pull the bytes somewhere else
+            isa::IMP     => 0x0000, //implied, no memory reference
+            isa::ACC     => 0x0000, //accumulator, no memory reference
+            isa::IMM     => 0x0000, //immediate, pull the bytes somewhere else
+            isa::REL     => 0x0000, //relative, pull the bytes somewhere else
             isa::INDX    => {
                 let indirect_address: u16 = (self.read_pc_byte() + self.state.X) as u16;
                 self.mem.read_word(indirect_address)
             }
             isa::INDY    => {
                 let indirect_address: u16 = self.read_pc_byte() as u16;
-                self.mem.read_word(indirect_address + (self.state.X as u16))
+                self.mem.read_word(indirect_address) + (self.state.Y as u16)
             }
 
             _ => { error!("Impossible match"); 0 }

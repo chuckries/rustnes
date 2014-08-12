@@ -1,26 +1,56 @@
-use mem::{Mem, RAM_SIZE};
+#![macro_escape]
+
+use mem::{Mem, Ram, RAM_SIZE};
+
 use cart::{Cart};
 use cart::test::*;
 
-pub fn get_empty_mem() -> Mem {
-    let cart: Cart = get_empty_cart();
+macro_rules! ram(
+    () => (
+        get_empty_ram()
+    );
+)
 
+macro_rules! mem(
+    () => (
+        get_empty_mem()
+    );
+    ($cart:expr) => (
+        get_mem_with_cart($cart)
+    );
+    ($cart:expr, $ram:expr) => (
+        get_mem_with_cart_and_ram($cart, $ram)
+    );
+)
+
+pub fn get_empty_ram() -> Ram {
+    [0u8, ..RAM_SIZE]
+}
+
+pub fn get_empty_mem() -> Mem {
     Mem {
-        cart: cart,
-        ram: [0u8, ..RAM_SIZE],
+        cart: cart!(),
+        ram: ram!(),
     }
 }
 
 pub fn get_mem_with_cart(cart: Cart) -> Mem {
     Mem {
         cart: cart,
-        ram: [0u8, ..RAM_SIZE],
+        ram: ram!(),
+    }
+}
+
+pub fn get_mem_with_cart_and_ram(cart: Cart, ram: Ram) -> Mem {
+    Mem {
+        cart: cart,
+        ram: ram,
     }
 }
 
 #[test]
 fn mem_sanity_test() {
-    let mut mem = get_empty_mem();
+    let mut mem = mem!();
 
     mem.ram[0x0000] = 0xAA;
     mem.ram[0x0001] = 0xBB;
@@ -33,7 +63,7 @@ fn mem_sanity_test() {
 
 #[test]
 fn mem_ram_mirror_test() {
-    let mut mem = get_empty_mem();
+    let mut mem = mem!();
 
     mem.ram[0x0000] = 0xAA;
     mem.ram[0x07FF] = 0xBB;
@@ -64,7 +94,7 @@ fn mem_ram_mirror_test() {
 //TODO fix this whole test, ppu values are hardcoded in mem right now which is not ideal
 #[test]
 fn mem_ppu_mirror_test() {
-    let mem = get_empty_mem();
+    let mem = mem!();
 
     let mut i: u16 = 0x2000;
 
