@@ -1,6 +1,7 @@
-use super::CartHeader;
+use cart::{Cart, CartHeader};
+use cart::{PRG_ROM_BANK_SIZE, CHR_ROM_BANK_SIZE};
+use cart::{PRG_RAM_BANK_SIZE, TRAINER_SIZE};
 
-//TODO I'm almost certain this is defined in libstd somewhere
 static MSDOS_EOF: u8 = 0x1a;
 
 static TEST_ROM_HEADER: [u8, ..16] = [ 
@@ -29,8 +30,19 @@ fn get_empty_header() -> CartHeader {
     }
 }
 
+fn get_empty_cart() -> Cart {
+    let hdr = get_empty_header();
+
+    Cart {
+        header: hdr,
+        prg_rom: Vec::from_fn(2, |_| [0u8, ..PRG_ROM_BANK_SIZE]),
+        chr_rom: Vec::from_fn(1, |_| [0u8, ..CHR_ROM_BANK_SIZE]),
+        _trainer: [0u8, ..TRAINER_SIZE],
+    }
+}
+
 #[test]
-fn header_decode_test() {
+fn cart_header_decode_test() {
     let hdr = CartHeader::new(&TEST_ROM_HEADER).unwrap();
     assert_eq!(hdr.identifier[0], 'N' as u8);
     assert_eq!(hdr.identifier[1], 'E' as u8);
@@ -48,7 +60,7 @@ fn header_decode_test() {
 }
 
 #[test]
-fn header_is_valid_test() {
+fn cart_header_is_valid_test() {
     let hdr = CartHeader::new(&TEST_ROM_HEADER).unwrap();
     assert!(hdr.is_valid());
 
@@ -58,4 +70,16 @@ fn header_is_valid_test() {
 
     let bad_hdr = get_empty_header();
     assert_eq!(bad_hdr.is_valid(), false);
+}
+
+#[test]
+fn cart_read_default_prg_rom_banks_test() {
+    let mut cart = get_empty_cart();
+
+    let prg_rom = vec![[0xAA, ..PRG_ROM_BANK_SIZE], [0xBB, ..PRG_ROM_BANK_SIZE]];
+    cart.prg_rom = prg_rom;
+    for i in range(0, PRG_ROM_BANK_SIZE as u16) {
+        assert_eq!(cart.read_from_lower_bank(i), 0xAA as u8);
+        assert_eq!(cart.read_from_upper_bank(i), 0xBB as u8);
+    }
 }
