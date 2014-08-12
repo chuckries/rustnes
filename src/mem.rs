@@ -32,17 +32,13 @@
 
 use cart::Cart;
 
-static ZERO_PAGE_SIZE:  uint = 0x100; //256 bytes
-static STACK_SIZE:      uint = 0x100; //256 bytes
-static RAM_SIZE:        uint = 0x600; //1.5 KB
+static RAM_SIZE: uint = 0x0800; //2 KB
 
 pub struct Mem {
     //used for reading PRG_ROM (and others?) from the cartridge
     cart: Cart, 
 
-    zero_page:  [u8, ..ZERO_PAGE_SIZE],
-    stack:      [u8, ..STACK_SIZE],
-    ram:        [u8, ..RAM_SIZE],
+    ram: [u8, ..RAM_SIZE],
 
 }
 
@@ -51,9 +47,7 @@ impl Mem {
         Mem {
             cart: cart,
 
-            zero_page:  [0u8, ..ZERO_PAGE_SIZE],
-            stack:      [0u8, ..STACK_SIZE],
-            ram:        [0u8, ..RAM_SIZE],
+            ram: [0u8, ..RAM_SIZE],
         }
     }
 
@@ -61,17 +55,7 @@ impl Mem {
     pub fn read(&self, virtual_address: u16) -> u8 {
         if virtual_address < 0x2000 {
             let address: uint = (virtual_address as uint) & 0x07FFF; //Mirrored after 0x0800
-
-            if address < 0x0100 {
-                self.zero_page[address]
-            } else if address < 0x0200 {
-                self.stack[address & 0xFF]
-            } else if address < 0x0800 {
-                self.ram[address & 0x01FF]
-            } else {
-                error!("Impossible");
-                0x00
-            }
+            self.ram[address]
         } else if virtual_address < 0x4000 {
             let address: uint = (virtual_address as uint) & 0x0007; //Mirrored after 0x2008
             //TODO calls into PPU at this point
