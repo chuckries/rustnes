@@ -52,7 +52,7 @@ impl Mem {
     }
 
     //TODO lots
-    pub fn read(&self, virtual_address: u16) -> u8 {
+    pub fn read_byte(&self, virtual_address: u16) -> u8 {
         if virtual_address < 0x2000 {
             let address: uint = (virtual_address as uint) & 0x07FFF; //Mirrored after 0x0800
             self.ram[address]
@@ -88,6 +88,14 @@ impl Mem {
             error!("Impossible");
             0x00
         }
+    }
+
+    pub fn read_word(&self, virtual_address: u16) -> u16 {
+        let lo: u8 = self.read_byte(virtual_address);
+        let hi: u8 = self.read_byte(virtual_address + 1);
+
+        let word: u16 = (hi as u16) << 8 | (lo as u16);
+        word
     }
 }
 
