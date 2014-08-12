@@ -1,31 +1,17 @@
 use mem::Mem;
 use cpu::CpuState;
 
+#[deriving(PartialEq, Show)]
 pub struct Instruction {
     pub instr: Instr,
     pub address_mode: AddressMode
 }
 
 impl Instruction {
-    pub fn new(opcode: u8) -> Option<Instruction> {
-        decode(opcode)
+    pub fn new(opcode: u8) -> Instruction {
+        decode(opcode).unwrap()
     }
 }
-
-//so this macro doesn't actually work, but leave it in for now
-//this could be used to expand out alu instructions easily in the match statement
-macro_rules! alu_inst(
-    ($instr:ident $imm:ident $zp:ident $zpx:ident $abs:ident $absx:ident $absy:ident $indx:ident $indy:ident) => (
-        $imm => ($instr, IMM),
-        $zp => ($instr, ZP),
-        $zpx => ($instr, ZPX),
-        $abs => ($instr, ABS),
-        $absx => ($instr, ABSX),
-        $absy => ($instr, ABSY),
-        $indx => ($instr, INDX),
-        $indy => ($instr, INDY),
-    );
-)
 
 fn decode(opcode: u8) -> Option<Instruction>
 {
@@ -51,6 +37,7 @@ fn decode(opcode: u8) -> Option<Instruction>
     }
 }
 
+#[deriving(PartialEq, Show)]
 pub enum Instr {
     //Load and Store
     LDA, LDX, LDY, STA, STX, STY,
@@ -89,6 +76,7 @@ pub enum Instr {
     INSTR_NONE,
 }
 
+#[deriving(PartialEq, Show)]
 pub enum AddressMode {
     ZP,     //Zero Page             AND $12
     ZPX,    //Indexed ZeroPage X    AND $12,X
@@ -105,34 +93,4 @@ pub enum AddressMode {
     INDY,   //Indirect Indexed      AND ($12),Y
 
     ADDRESS_MODE_NONE,
-}
-
-#[cfg(test)]
-mod test {
-
-    use cpu::isa::*;
-
-    #[test]
-    fn isa_test() {
-        let address_mode: AddressMode = ZP;
-
-        let x: u8 = 
-            match address_mode {
-                ZP => 0,
-                ZPX => 0,
-                ZPY => 0,
-                ABS => 0,
-                ABSX => 0,
-                ABSY => 0,
-                IND => 0,
-                IMP => 0,
-                ACC => 0,
-                IMM => 0,
-                REL => 0,
-                INDX => 0,
-                INDY => 0,
-
-                ADDRESS_MODE_NONE => 0,
-            };
-    }
 }

@@ -1,64 +1,15 @@
 use mem::{Mem};
 
-//sigh... monster use statement TODO: make this cleaner
-//The whole point of the isa mod was to hide this stuff
 use self::isa::{
     Instruction, 
     Instr, 
     AddressMode,
-    ZP,     //Zero Page             AND $12
-    ZPX,    //Indexed ZeroPage X    AND $12,X
-    ZPY,    //Indexed ZeroPage Y    LDX $12,Y
-    ABS,    //Asolute               AND $1234
-    ABSX,   //Indexed Absolute X    AND $1234,X
-    ABSY,   //Indexed Absolute Y    AND $1234,Y
-    IND,    //Indirect              JMP ($1234)
-    IMP,    //Implied               CLD
-    ACC,    //Accumulator           ASL
-    IMM,    //Immediate             AND #$12
-    REL,    //Relative              BCS *+5
-    INDX,   //Indexed Indirect      AND ($12,X)
-    INDY,   //Indirect Indexed      AND ($12),Y
-    ADDRESS_MODE_NONE,
-
-    //Load and Store
-    LDA, LDX, LDY, STA, STX, STY,
-
-    //Arithmetic
-    ADC, SBC, INC, INX, INY, DEC, DEX, DEY,
-
-    //Shift and Rotate
-    ASL, LSR, ROL, ROR,
-
-    //Logic
-    AND, ORA, EOR,
-
-    //Compare and Test Bit
-    CMP, CPX, CPY, BIT,
-
-    //Bracnh
-    BCC, BCS, BEQ, BMI, BNE, BPL, BVC, BVS,
-
-    //Transfer
-    TAX, TXA, TAY, TYA, TSX, TXS,
-
-    //Stack
-    PHA, PLA, PHP, PLP,
-
-    //Subroutines and Jump
-    JMP, JSR, RTS, RTI,
-
-    //Set and Clear
-    SEC, SED, SEI, CLC, CLD, CLI, CLV,
-
-    //Miscellaneous
-    NOP, BRK,
-
-    //Undefined
-    INSTR_NONE,
 };
 
 mod isa;
+
+#[cfg(test)]
+pub mod test;
 
 #[allow(uppercase_variables)]
 struct CpuState {
@@ -71,6 +22,19 @@ struct CpuState {
     pub P:  u8,     //Status Register
 }
 
+impl CpuState {
+    pub fn new() -> CpuState {
+        CpuState {
+            PC: 0x0000,
+            A: 0x00,
+            X: 0x00,
+            Y: 0x00,
+            SP: 0x00,
+            P: 0x00,
+        }
+    }
+}
+
 pub struct Cpu {
     state: CpuState,
 
@@ -79,14 +43,7 @@ pub struct Cpu {
 
 impl Cpu {
     pub fn new(mem: Mem) -> Cpu {
-        let cpu_state = CpuState {
-            PC: 0x0000,
-            A:  0x00,
-            X:  0x00,
-            Y:  0x00,
-            SP: 0x00,
-            P:  0x00,
-        };
+        let cpu_state = CpuState::new();
 
         Cpu { 
             state: cpu_state,
@@ -100,7 +57,7 @@ impl Cpu {
     //goal of this function is to execute the next instruction and return the number of cycles
     //elapsed
     pub fn run_instruction(&mut self) -> uint {
-        let instr: Instruction = Instruction::new(self.read_pc_byte()).unwrap();
+        let instr = self.instr_decode();
 
         //get the memory address referenced by this instr
         let m_addr = self.instr_mem_addr(instr.address_mode);
@@ -112,29 +69,34 @@ impl Cpu {
         0
     }
 
+    pub fn instr_decode(&mut self) -> Instruction {
+        let opcode = self.read_pc_byte();
+        Instruction::new(opcode)
+    }
+
     //performs the instruction's memory read phase and returns the value 
     //read from memory
     pub fn instr_mem_addr(&mut self, mode: AddressMode) -> u16 {
         match mode {
-            ZP      => self.read_pc_byte() as u16,
-            ZPX     => (self.read_pc_byte() + self.state.X) as u16,
-            ZPY     => (self.read_pc_byte() + self.state.Y) as u16,
-            ABS     => self.read_pc_word(),
-            ABSX    => self.read_pc_word() + (self.state.X as u16), 
-            ABSY    => self.read_pc_word() + (self.state.Y as u16),
-            IND     => {
+            isa::ZP      => self.read_pc_byte() as u16,
+            isa::ZPX     => (self.read_pc_byte() + self.state.X) as u16,
+            isa::ZPY     => (self.read_pc_byte() + self.state.Y) as u16,
+            isa::ABS     => self.read_pc_word(),
+            isa::ABSX    => self.read_pc_word() + (self.state.X as u16), 
+            isa::ABSY    => self.read_pc_word() + (self.state.Y as u16),
+            isa::IND     => {
                 let indirect_address: u16 = self.read_pc_word();
                 self.mem.read_word(indirect_address)
             }
-            IMP     => 0, //implied, no memory reference
-            ACC     => 0, //accumulator, no memory reference
-            IMM     => 0, //immediate, pull the bytes somewhere else
-            REL     => 0, //relative, pull the bytes somewhere else
-            INDX    => {
+            isa::IMP     => 0, //implied, no memory reference
+            isa::ACC     => 0, //accumulator, no memory reference
+            isa::IMM     => 0, //immediate, pull the bytes somewhere else
+            isa::REL     => 0, //relative, pull the bytes somewhere else
+            isa::INDX    => {
                 let indirect_address: u16 = (self.read_pc_byte() + self.state.X) as u16;
                 self.mem.read_word(indirect_address)
             }
-            INDY    => {
+            isa::INDY    => {
                 let indirect_address: u16 = self.read_pc_byte() as u16;
                 self.mem.read_word(indirect_address + (self.state.X as u16))
             }

@@ -2,9 +2,16 @@ use mem::{Mem, RAM_SIZE};
 use cart::{Cart};
 use cart::test::*;
 
-fn get_empty_mem() -> Mem {
+pub fn get_empty_mem() -> Mem {
     let cart: Cart = get_empty_cart();
 
+    Mem {
+        cart: cart,
+        ram: [0u8, ..RAM_SIZE],
+    }
+}
+
+pub fn get_mem_with_cart(cart: Cart) -> Mem {
     Mem {
         cart: cart,
         ram: [0u8, ..RAM_SIZE],

@@ -35,10 +35,20 @@ pub fn get_empty_cart() -> Cart {
 
     Cart {
         header: hdr,
-        prg_rom: Vec::from_fn(2, |_| [0u8, ..PRG_ROM_BANK_SIZE]),
+        prg_rom: get_empty_prg_rom(),
         chr_rom: Vec::from_fn(1, |_| [0u8, ..CHR_ROM_BANK_SIZE]),
         _trainer: [0u8, ..TRAINER_SIZE],
     }
+}
+
+pub fn get_empty_prg_rom() -> Vec<[u8, ..PRG_ROM_BANK_SIZE]> {
+    Vec::from_fn(2, |_| [0u8, ..PRG_ROM_BANK_SIZE])
+}
+
+pub fn get_cart_with_prg_rom(prg_rom: Vec<[u8, ..PRG_ROM_BANK_SIZE]>) -> Cart {
+    let mut cart = get_empty_cart();
+    cart.prg_rom = prg_rom;
+    cart
 }
 
 #[test]

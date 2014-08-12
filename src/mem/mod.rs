@@ -33,7 +33,7 @@
 use cart::Cart;
 
 #[cfg(test)]
-mod test;
+pub mod test;
 
 static RAM_SIZE: uint = 0x0800; //2 KB
 
@@ -82,9 +82,9 @@ impl Mem {
             //TODO SRAM
             0x00
         } else if virtual_address < 0xC000 {
-            self.cart.read_from_upper_bank(virtual_address & 0x3FFF)
-        } else if virtual_address <= 0xFFFF {
             self.cart.read_from_lower_bank(virtual_address & 0x3FFF)
+        } else if virtual_address <= 0xFFFF {
+            self.cart.read_from_upper_bank(virtual_address & 0x3FFF)
         } else {
             error!("Impossible");
             0x00
