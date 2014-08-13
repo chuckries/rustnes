@@ -29,33 +29,33 @@ bitflags!(
     flags CpuFlags: u8 {
         //flags for setting
         //use these to set bits by or-ing
-        static C_SET = 0b00000001,
-        static Z_SET = 0b00000010,
-        static I_SET = 0b00000100,
-        static D_SET = 0b00001000, //unused
-        static B_SET = 0b00010000,
-        static X_SET = 0b00100000, //unused
-        static V_SET = 0b01000000,
-        static N_SET = 0b10000000,
+        static C_FLAG = 0b00000001,
+        static Z_FLAG = 0b00000010,
+        static I_FLAG = 0b00000100,
+        static D_FLAG = 0b00001000, //unused
+        static B_FLAG = 0b00010000,
+        static X_FLAG = 0b00100000, //unused
+        static V_FLAG = 0b01000000,
+        static N_FLAG = 0b10000000,
 
-        //flags for clear
-        //use these to clear bits by and-ing
-        static C_CLEAR = 0b11111110,
-        static Z_CLEAR = 0b11111101,
-        static I_CLEAR = 0b11111011,
-        static D_CLEAR = 0b11110111,
-        static B_CLEAR = 0b11101111,
-        static X_CLEAR = 0b11011111,
-        static V_CLEAR = 0b10111111,
-        static N_CLEAR = 0b01111111,
-
-        //helpful combos for clearing
-        static NZ_CLEAR     = N_CLEAR.bits & Z_CLEAR.bits,
-        static NVZC_CLEAR   = N_CLEAR.bits & V_CLEAR.bits & Z_CLEAR.bits & C_CLEAR.bits,
-        static NZC_CLEAR    = N_CLEAR.bits & Z_CLEAR.bits & C_CLEAR.bits,
-        static NV_CLEAR     = N_CLEAR.bits & V_CLEAR.bits
+        static NZ_FLAG     = N_FLAG.bits | Z_FLAG.bits,
+        static NVZC_FLAG   = N_FLAG.bits | V_FLAG.bits | Z_FLAG.bits | C_FLAG.bits,
+        static NZC_FLAG    = N_FLAG.bits | Z_FLAG.bits | C_FLAG.bits,
+        static NV_FLAG     = N_FLAG.bits | V_FLAG.bits
     }
 )
+
+impl CpuFlags {
+    pub fn set_zn(&mut self, x: u8) {
+        if x == 0 { self.insert(Z_FLAG); }
+        else if x & N_FLAG.bits > 0 { self.insert(N_FLAG); }
+    }
+
+    //calculate overflow flag for a + b = c
+    pub fn set_v(&mut self, a: u8, b: u8, c: u8) {
+        if ((a ^ c) & (b ^ c)) & N_FLAG.bits > 0 { self.insert(V_FLAG); } //trick way to check for overflow
+    }
+}
 
 #[allow(uppercase_variables)]
 struct CpuState {
@@ -72,11 +72,11 @@ impl CpuState {
     pub fn new() -> CpuState {
         CpuState {
             PC: 0x0000,
-            A: 0x00,
-            X: 0x00,
-            Y: 0x00,
+            A:  0x00,
+            X:  0x00,
+            Y:  0x00,
             SP: 0x00,
-            P: CpuFlags::empty(),
+            P:  CpuFlags::empty(),
         }
     }
 }
@@ -108,21 +108,55 @@ impl Cpu {
         //get the memory address referenced by this instr
         let m_addr = self.instr_mem_addr(instr.address_mode);
 
+        //get the value referenced by the memory addr
+        let m = self.instr_mem_read(m_addr, instr);
+
+        //perform the action of the operation
+        let x = self.instr_exec(m, instr);
+
         0
     }
 
-    pub fn instr_exec(&mut self, instr: Instr) -> u8 {
-        match instr {
+    pub fn instr_decode(&mut self) -> Instruction {
+        Instruction::new(self.read_pc_byte())
+    }
+
+    pub fn instr_exec(&mut self, m: u8, instr: Instruction) -> u8 {
+        match instr.instr {
             isa::ADC => {
-                0
+                let a: u8 = self.state.A;
+                let val: u16 = (m as u16) + (a as u16) + if self.state.P.contains(C_FLAG) { 1 } else { 0 };
+                self.state.P.remove(NVZC_FLAG);
+
+                if val & 0xFF > 0 { self.state.P.insert(C_FLAG); }
+
+                let val: u8 = val as u8;
+
+                self.state.P.set_v(a, m, val);
+                self.state.P.set_zn(val);
+                val
             }
             _ => { error!("Unimplemented instruction"); 0 }
         }
     }
 
-    pub fn instr_decode(&mut self) -> Instruction {
-        let opcode = self.read_pc_byte();
-        Instruction::new(opcode)
+    //I wish I could get rid of the mod name...
+    pub fn instr_mem_read(&self, addr: u16, instr: Instruction) -> u8 {
+        match instr.instr {
+            isa::ADC | isa::AND | isa::ASL | isa::BIT |
+            isa::CMP | isa::CPX | isa::CPY | isa::DEC |
+            isa::EOR | isa::INC | isa::JMP | isa::JSR |
+            isa::LDA | isa::LDX | isa::LDY | isa::LSR |
+            isa::ORA | isa::ROL | isa::ROR | isa::SBC 
+            => {
+                self.mem.read_byte(addr)
+            }
+            _ => { 0 }
+        }
+    }
+
+    pub fn instr_mem_write(&mut self) {
+        self.mem.write_byte(0);
     }
 
     //performs the instruction's memory read phase and returns the value 

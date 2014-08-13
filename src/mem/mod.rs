@@ -102,5 +102,9 @@ impl Mem {
         let word: u16 = (hi as u16) << 8 | (lo as u16);
         word
     }
+
+    pub fn write_byte(&self, virtual_address: u16) {
+        //todo
+    }
 }
 
