@@ -1,3 +1,17 @@
+/// # Status Register (P)
+///
+///  7 6 5 4 3 2 1 0
+///  N V _ B D I Z C
+///  | |   | | | | +--- Carry Flag
+///  | |   | | | +----- Zero Flag
+///  | |   | | +------- Interrupt Disable 
+///  | |   | +--------- Decimal Mode (Allows BCD, not implemented on NES)
+///  | |   +----------- Break Command
+///  | +--------------- Overflow Flag
+///  +----------------- Negative Flag
+
+use std::fmt;
+
 use mem::{Mem};
 
 use self::isa::{
@@ -11,6 +25,38 @@ mod isa;
 #[cfg(test)]
 pub mod test;
 
+bitflags!(
+    flags CpuFlags: u8 {
+        //flags for setting
+        //use these to set bits by or-ing
+        static C_SET = 0b00000001,
+        static Z_SET = 0b00000010,
+        static I_SET = 0b00000100,
+        static D_SET = 0b00001000, //unused
+        static B_SET = 0b00010000,
+        static X_SET = 0b00100000, //unused
+        static V_SET = 0b01000000,
+        static N_SET = 0b10000000,
+
+        //flags for clear
+        //use these to clear bits by and-ing
+        static C_CLEAR = 0b11111110,
+        static Z_CLEAR = 0b11111101,
+        static I_CLEAR = 0b11111011,
+        static D_CLEAR = 0b11110111,
+        static B_CLEAR = 0b11101111,
+        static X_CLEAR = 0b11011111,
+        static V_CLEAR = 0b10111111,
+        static N_CLEAR = 0b01111111,
+
+        //helpful combos for clearing
+        static NZ_CLEAR     = N_CLEAR.bits & Z_CLEAR.bits,
+        static NVZC_CLEAR   = N_CLEAR.bits & V_CLEAR.bits & Z_CLEAR.bits & C_CLEAR.bits,
+        static NZC_CLEAR    = N_CLEAR.bits & Z_CLEAR.bits & C_CLEAR.bits,
+        static NV_CLEAR     = N_CLEAR.bits & V_CLEAR.bits
+    }
+)
+
 #[allow(uppercase_variables)]
 struct CpuState {
     //registers
@@ -19,7 +65,7 @@ struct CpuState {
     pub X:  u8,     //Index Register X
     pub Y:  u8,     //Index Register Y
     pub SP: u8,     //Stack Pointer
-    pub P:  u8,     //Status Register
+    pub P:  CpuFlags,     //Status Register
 }
 
 impl CpuState {
@@ -30,7 +76,7 @@ impl CpuState {
             X: 0x00,
             Y: 0x00,
             SP: 0x00,
-            P: 0x00,
+            P: CpuFlags::empty(),
         }
     }
 }
@@ -65,8 +111,13 @@ impl Cpu {
         0
     }
 
-    pub fn instr_exec(&mut self) -> u8 {
-        0
+    pub fn instr_exec(&mut self, instr: Instr) -> u8 {
+        match instr {
+            isa::ADC => {
+                0
+            }
+            _ => { error!("Unimplemented instruction"); 0 }
+        }
     }
 
     pub fn instr_decode(&mut self) -> Instruction {
