@@ -48,12 +48,15 @@ bitflags!(
 impl CpuFlags {
     pub fn set_zn(&mut self, x: u8) {
         if x == 0 { self.insert(Z_FLAG); }
-        else if x & N_FLAG.bits > 0 { self.insert(N_FLAG); }
+        else if (x as i8) < 0 { self.insert(N_FLAG); }
     }
 
     //calculate overflow flag for a + b = c
     pub fn set_v(&mut self, a: u8, b: u8, c: u8) {
-        if ((a ^ c) & (b ^ c)) & N_FLAG.bits > 0 { self.insert(V_FLAG); } //trick way to check for overflow
+        //trick way to check for overflow
+        //this works because both operands and the result must have the same sign, otherwise
+        //overfow has occured.
+        if (((a ^ c) & (b ^ c)) as i8) < 0 { self.insert(V_FLAG); } 
     }
 }
 
@@ -121,23 +124,25 @@ impl Cpu {
         Instruction::new(self.read_pc_byte())
     }
 
-    pub fn instr_exec(&mut self, m: u8, instr: Instruction) -> u8 {
+
+    pub fn instr_exec(&mut self, from_mem: u8, instr: Instruction) -> u8 {
+        let a: u8 = self.state.A;
+        let m: u8 = if instr.address_mode == isa::IMM { self.read_pc_byte() } else { from_mem };
+        let out: u8 = 0;
         match instr.instr {
-            isa::ADC => {
-                let a: u8 = self.state.A;
-                let val: u16 = (m as u16) + (a as u16) + if self.state.P.contains(C_FLAG) { 1 } else { 0 };
+            isa::ADC => { // A + M + C -> A and C
+                let val: u16 = (m as u16) + (a as u16) + (self.state.P & C_FLAG).bits as u16;
                 self.state.P.remove(NVZC_FLAG);
-
                 if val & 0xFF > 0 { self.state.P.insert(C_FLAG); }
-
                 let val: u8 = val as u8;
-
                 self.state.P.set_v(a, m, val);
                 self.state.P.set_zn(val);
-                val
+                self.state.A = val;
             }
-            _ => { error!("Unimplemented instruction"); 0 }
+            _ => { error!("Unimplemented instruction"); }
         }
+
+        out
     }
 
     //I wish I could get rid of the mod name...

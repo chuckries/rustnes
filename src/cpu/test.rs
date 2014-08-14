@@ -4,7 +4,7 @@ use cart::test::*;
 use mem::{Mem};
 use mem::test::*;
 
-use cpu::{Cpu, CpuState};
+use cpu::{Cpu, CpuState, CpuFlags};
 use cpu::isa;
 
 fn get_empty_cpu_state() -> CpuState {
@@ -37,19 +37,23 @@ fn get_cpu_with_cart(cart: Cart) -> Cpu {
 
 #[test]
 fn cpu_sanity_test() {
-    let mut prg_rom = prg_rom!();
+    let mut prg_rom_bank = prg_rom_bank!();
 
     //ADC $AA
-    prg_rom.get_mut(0)[0x0000] = 0x65;
-    prg_rom.get_mut(0)[0x0001] = 0xAA; 
+    prg_rom_bank[0x0000] = 0x65;
+    prg_rom_bank[0x0001] = 0xAA; 
 
-    assert_eq!(prg_rom[0][0x0000], 0x65);
-    assert_eq!(prg_rom[0][0x0001], 0xAA);
+    let mut ram = ram!();
+    ram[0xAA] = 0x01;
 
-    let cart = cart!(prg_rom);
-    let mut cpu = get_cpu_with_cart(cart);
+    let cart = cart!(prg_rom!(prg_rom_bank, prg_rom_bank!()));
+
+    let mem = mem!(cart, ram);
+
+    let mut cpu = get_cpu_with_mem(mem);
 
     cpu.state.PC = 0x8000;
+    cpu.state.A = 0x01;
 
     let instr = cpu.instr_decode();
     assert_eq!(instr.instr, isa::ADC);
@@ -59,6 +63,13 @@ fn cpu_sanity_test() {
     let m_addr = cpu.instr_mem_addr(instr.address_mode);
     assert_eq!(m_addr, 0xAA);
     assert_eq!(cpu.state.PC, 0x8002);
+
+    let m = cpu.instr_mem_read(m_addr, instr);
+    assert_eq!(m, 0x01);
+    
+    let x = cpu.instr_exec(m, instr);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.A, 0x02);
 }
 
 #[test]
