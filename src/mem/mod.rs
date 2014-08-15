@@ -103,7 +103,7 @@ impl Mem {
         word
     }
 
-    pub fn write_byte(&self, virtual_address: u16) {
+    pub fn write_byte(&self, virtual_address: u16, val: u8) {
         //todo
     }
 }

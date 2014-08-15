@@ -124,6 +124,9 @@ impl Cpu {
 
         //perform the action of the operation
         let x = self.instr_exec(m, instr);
+        
+        //write back to ram
+        self.instr_mem_write(m_addr, x, instr);
 
         0
     }
@@ -154,15 +157,18 @@ impl Cpu {
                 self.state.A = val;
             }
             isa::SBC => {
-                let val: u16 = ((a as i16) as u16) + !((m as i16) as u16) + (self.state.P & C_FLAG).bits as u16; //yup, subtraction looks weird. see SBC at http://users.telenet.be/kim1-6502/6502/proman.html#222
+                let val: u16 = (a as u16) + (!m as u16) + (self.state.P & C_FLAG).bits as u16; //yup, subtraction looks weird. see SBC at http://users.telenet.be/kim1-6502/6502/proman.html#222
                 self.state.P.remove(NVZC_FLAG);
                 if val & !0xFF > 0 { self.state.P.insert(C_FLAG); }
+                /*
                 if ((a ^ m) as i8) > 0 { //this checks to see if the signs of a and m are the same, if the signs are different overflow can't happen
                    if self.state.P.contains(C_FLAG) {
 
                    }
                 }
+                */
                 let val: u8 = val as u8;
+                if (((a ^ val) & (a ^ m)) as i8) < 0 { self.state.P.insert(V_FLAG); }
                 self.state.P.set_zn(val);
                 self.state.A = val;
             }
@@ -187,8 +193,8 @@ impl Cpu {
         }
     }
 
-    pub fn instr_mem_write(&mut self) {
-        self.mem.write_byte(0);
+    pub fn instr_mem_write(&mut self, addr: u16, from_exec: u8, instr: Instruction) {
+        self.mem.write_byte(addr, from_exec);
     }
 
     //performs the instruction's memory read phase and returns the value 

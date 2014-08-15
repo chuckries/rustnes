@@ -513,11 +513,11 @@ fn cpu_instr_sbc_test() {
     prg_rom_bank[0x0008] = 0xE9;
     prg_rom_bank[0x0009] = 0x01;
 
-    //SBC IMM 0x7F - 0xFF, with carry, overflow set, carry set, negative set
+    //SBC IMM 0x7F - 0xFF, with carry, carry set, negative set
     prg_rom_bank[0x000A] = 0xE9;
     prg_rom_bank[0x000B] = 0xFF;
 
-    //SBC IMM 0xC0 - 0x40, no carry, overflow set
+    //SBC IMM 0xC0 - 0x40, no carry, overflow set, carry set
     prg_rom_bank[0x000C] = 0xE9;
     prg_rom_bank[0x000D] = 0x40;
 
@@ -570,20 +570,20 @@ fn cpu_instr_sbc_test() {
     assert_eq!(cpu.state.A, 0x7F);
     assert_eq!(cpu.state.P, CpuFlags::none() | C_FLAG | V_FLAG);
 
-    //SBC IMM 0x7F - 0xFF, with carry, overflow set, carry set, negative set
+    //SBC IMM 0x7F - 0xFF, with carry, overflow set, negative set
     cpu.state.A = 0x7F;
     cpu.state.P.clear();
     cpu.state.P.insert(C_FLAG);
     cpu.instr_run();
     assert_eq!(cpu.state.PC, 0x800C);
     assert_eq!(cpu.state.A, 0x80);
-    assert_eq!(cpu.state.P, CpuFlags::none() | C_FLAG | V_FLAG | N_FLAG);
+    assert_eq!(cpu.state.P, CpuFlags::none() | V_FLAG | N_FLAG);
 
-    //SBC IMM 0xC0 - 0x40, no carry, overflow set
+    //SBC IMM 0xC0 - 0x40, no carry, overflow set, carry set
     cpu.state.A = 0xC0;
     cpu.state.P.clear();
     cpu.instr_run();
     assert_eq!(cpu.state.PC, 0x800E);
     assert_eq!(cpu.state.A, 0x7F);
-    assert_eq!(cpu.state.P, CpuFlags::none() | V_FLAG);
+    assert_eq!(cpu.state.P, CpuFlags::none() | V_FLAG | C_FLAG);
 }
