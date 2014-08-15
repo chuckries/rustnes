@@ -9,7 +9,7 @@ pub struct Instruction {
 
 impl Instruction {
     pub fn new(opcode: u8) -> Instruction {
-        decode(opcode).unwrap()
+        decode(opcode).unwrap() //TODO error message here with opcode
     }
 }
 
@@ -27,6 +27,15 @@ fn decode(opcode: u8) -> Option<Instruction>
             0x79 => (ADC, ABSY),
             0x61 => (ADC, INDX),
             0x71 => (ADC, INDY),
+
+            0xE9 => (SBC, IMM),
+            0xE5 => (SBC, ZP),
+            0xF5 => (SBC, ZPX),
+            0xED => (SBC, ABS),
+            0xFD => (SBC, ABSX),
+            0xF9 => (SBC, ABSY),
+            0xE1 => (SBC, INDX),
+            0xF1 => (SBC, INDY),
 
             _ => (INSTR_NONE, ADDRESS_MODE_NONE)
         };

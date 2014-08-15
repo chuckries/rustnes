@@ -32,16 +32,18 @@ bitflags!(
         static C_FLAG = 0b00000001,
         static Z_FLAG = 0b00000010,
         static I_FLAG = 0b00000100,
-        static D_FLAG = 0b00001000, //unused
+        static D_FLAG = 0b00001000, //unused, always on
         static B_FLAG = 0b00010000,
-        static X_FLAG = 0b00100000, //unused
+        static X_FLAG = 0b00100000, //unused, always on
         static V_FLAG = 0b01000000,
         static N_FLAG = 0b10000000,
 
         static NZ_FLAG     = N_FLAG.bits | Z_FLAG.bits,
         static NVZC_FLAG   = N_FLAG.bits | V_FLAG.bits | Z_FLAG.bits | C_FLAG.bits,
         static NZC_FLAG    = N_FLAG.bits | Z_FLAG.bits | C_FLAG.bits,
-        static NV_FLAG     = N_FLAG.bits | V_FLAG.bits
+        static NV_FLAG     = N_FLAG.bits | V_FLAG.bits,
+
+        static DX_FLAG     = D_FLAG.bits | X_FLAG.bits
     }
 )
 
@@ -51,12 +53,18 @@ impl CpuFlags {
         else if (x as i8) < 0 { self.insert(N_FLAG); }
     }
 
-    //calculate overflow flag for a + b = c
-    pub fn set_v(&mut self, a: u8, b: u8, c: u8) {
-        //trick way to check for overflow
-        //this works because both operands and the result must have the same sign, otherwise
-        //overfow has occured.
-        if (((a ^ c) & (b ^ c)) as i8) < 0 { self.insert(V_FLAG); } 
+    pub fn clear(&mut self) {
+        self.bits = DX_FLAG.bits;
+    }
+
+    pub fn none() -> CpuFlags {
+        DX_FLAG
+    }
+}
+
+impl fmt::Show for CpuFlags {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:X}", self.bits)
     }
 }
 
@@ -79,7 +87,7 @@ impl CpuState {
             X:  0x00,
             Y:  0x00,
             SP: 0x00,
-            P:  CpuFlags::empty(),
+            P:  CpuFlags::none(),
         }
     }
 }
@@ -105,7 +113,7 @@ impl Cpu {
 
     //goal of this function is to execute the next instruction and return the number of cycles
     //elapsed
-    pub fn run_instruction(&mut self) -> uint {
+    pub fn instr_run(&mut self) -> uint {
         let instr = self.instr_decode();
 
         //get the memory address referenced by this instr
@@ -127,15 +135,34 @@ impl Cpu {
 
     pub fn instr_exec(&mut self, from_mem: u8, instr: Instruction) -> u8 {
         let a: u8 = self.state.A;
-        let m: u8 = if instr.address_mode == isa::IMM { self.read_pc_byte() } else { from_mem };
+        let x: u8 = self.state.X;
+        let y: u8 = self.state.Y;
+        let m: u8 = match instr.address_mode {
+            isa::IMM | isa::REL    
+                => { self.read_pc_byte() }
+            _   => { from_mem }
+        };
         let out: u8 = 0;
         match instr.instr {
             isa::ADC => { // A + M + C -> A and C
-                let val: u16 = (m as u16) + (a as u16) + (self.state.P & C_FLAG).bits as u16;
+                let val: u16 = (a as u16) + (m as u16) + (self.state.P & C_FLAG).bits as u16;
                 self.state.P.remove(NVZC_FLAG);
-                if val & 0xFF > 0 { self.state.P.insert(C_FLAG); }
+                if val & !0xFF > 0 { self.state.P.insert(C_FLAG); }
                 let val: u8 = val as u8;
-                self.state.P.set_v(a, m, val);
+                if (((a ^ val) & (m ^ val)) as i8) < 0 { self.state.P.insert(V_FLAG); } //thanks to http://www.opensourceforu.com/2009/03/joy-of-programming-how-to-detect-integer-overflow/
+                self.state.P.set_zn(val);
+                self.state.A = val;
+            }
+            isa::SBC => {
+                let val: u16 = ((a as i16) as u16) + !((m as i16) as u16) + (self.state.P & C_FLAG).bits as u16; //yup, subtraction looks weird. see SBC at http://users.telenet.be/kim1-6502/6502/proman.html#222
+                self.state.P.remove(NVZC_FLAG);
+                if val & !0xFF > 0 { self.state.P.insert(C_FLAG); }
+                if ((a ^ m) as i8) > 0 { //this checks to see if the signs of a and m are the same, if the signs are different overflow can't happen
+                   if self.state.P.contains(C_FLAG) {
+
+                   }
+                }
+                let val: u8 = val as u8;
                 self.state.P.set_zn(val);
                 self.state.A = val;
             }
