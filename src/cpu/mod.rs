@@ -160,15 +160,10 @@ impl Cpu {
                 let val: u16 = (a as u16) + (!m as u16) + (self.state.P & C_FLAG).bits as u16; //yup, subtraction looks weird. see SBC at http://users.telenet.be/kim1-6502/6502/proman.html#222
                 self.state.P.remove(NVZC_FLAG);
                 if val & !0xFF > 0 { self.state.P.insert(C_FLAG); }
-                /*
-                if ((a ^ m) as i8) > 0 { //this checks to see if the signs of a and m are the same, if the signs are different overflow can't happen
-                   if self.state.P.contains(C_FLAG) {
-
-                   }
-                }
-                */
                 let val: u8 = val as u8;
-                if (((a ^ val) & (a ^ m)) as i8) < 0 { self.state.P.insert(V_FLAG); }
+                //since SBC is A - M - !C = result, it's like result + M + !C = A, so overflow can
+                //be done with (A ^ result) & (A ^ M) < 0, which is the same idea as ADC
+                if (((a ^ val) & (a ^ m)) as i8) < 0 { self.state.P.insert(V_FLAG); } //I found this slick implementation at http://nesdev.com/6502.txt
                 self.state.P.set_zn(val);
                 self.state.A = val;
             }
