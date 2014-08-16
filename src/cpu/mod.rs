@@ -1,18 +1,6 @@
-/// # Status Register (P)
-///
-///  7 6 5 4 3 2 1 0
-///  N V _ B D I Z C
-///  | |   | | | | +--- Carry Flag
-///  | |   | | | +----- Zero Flag
-///  | |   | | +------- Interrupt Disable 
-///  | |   | +--------- Decimal Mode (Allows BCD, not implemented on NES)
-///  | |   +----------- Break Command
-///  | +--------------- Overflow Flag
-///  +----------------- Negative Flag
-
 use std::fmt;
 
-use cart::{Cart};
+use nes::{PrgRom};
 
 use self::isa::{
     Instruction, 
@@ -27,6 +15,19 @@ mod isa;
 //VAddr represents an NES virtual address
 type VAddr = u16;
 
+
+
+/// # Status Register (P)
+///
+///  7 6 5 4 3 2 1 0
+///  N V _ B D I Z C
+///  | |   | | | | +--- Carry Flag
+///  | |   | | | +----- Zero Flag
+///  | |   | | +------- Interrupt Disable 
+///  | |   | +--------- Decimal Mode (Allows BCD, not implemented on NES)
+///  | |   +----------- Break Command
+///  | +--------------- Overflow Flag
+///  +----------------- Negative Flag
 bitflags!(
     flags CpuFlags: u8 {
         //flags for setting
@@ -99,17 +100,17 @@ type Ram = [u8, ..RAM_SIZE];
 
 pub struct Cpu {
     state: CpuState,
-    cart: Cart,
+    prg_rom: PrgRom,
     ram: Ram,
 }
 
 impl Cpu {
-    pub fn new(cart: Cart) -> Cpu {
+    pub fn new(prg_rom: PrgRom) -> Cpu {
         let cpu_state = CpuState::new();
 
         Cpu { 
             state: cpu_state,
-            cart: cart,
+            prg_rom: prg_rom,
             ram: [0u8, ..RAM_SIZE],
         }
     }
@@ -290,8 +291,6 @@ impl Cpu {
 /// |_______________| $0000 |_______________|
 
     //Read a byte from the memory bus
-    //
-    //TODO maybe incorporate cart into this file
     fn read_byte(&self, virtual_address: VAddr) -> u8 {
         if virtual_address < 0x2000 {
             let address: uint = (virtual_address as uint) & 0x07FF; //Mirrored after 0x0800
@@ -320,13 +319,15 @@ impl Cpu {
         } else if virtual_address < 0x8000 {
             //TODO SRAM
             0x00
-        } else if virtual_address < 0xC000 {
-            self.cart.read_from_lower_bank(virtual_address & 0x3FFF)
-        } else if virtual_address <= 0xFFFF {
-            self.cart.read_from_upper_bank(virtual_address & 0x3FFF)
-        } else {
-            error!("Impossible");
-            0x00
+        } 
+        
+        //TODO I need to implement mapping at some point
+        else if virtual_address < 0xC000 {
+            let address = 0x3FFF;
+            self.prg_rom[0][address]
+        } else { // if virtual_address <= 0xFFFF
+            let address = 0x3FFF;
+            self.prg_rom[1][address]
         }
     }
 

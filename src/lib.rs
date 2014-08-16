@@ -3,8 +3,6 @@
 
 #[phase(plugin, link)] extern crate log;
 
-
-mod cart;
 mod cpu;
 
 pub mod nes;
