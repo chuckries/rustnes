@@ -5,7 +5,6 @@
 
 
 mod cart;
-mod mem;
 mod cpu;
 
 pub mod nes;

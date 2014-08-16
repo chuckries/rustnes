@@ -12,7 +12,7 @@
 
 use std::fmt;
 
-use mem::{Mem};
+use cart::{Cart};
 
 use self::isa::{
     Instruction, 
@@ -22,8 +22,10 @@ use self::isa::{
 
 mod isa;
 
-#[cfg(test)]
-pub mod test;
+#[cfg(test)] mod test;
+
+//VAddr represents an NES virtual address
+type VAddr = u16;
 
 bitflags!(
     flags CpuFlags: u8 {
@@ -71,7 +73,7 @@ impl fmt::Show for CpuFlags {
 #[allow(uppercase_variables)]
 struct CpuState {
     //registers
-    pub PC: u16,    //Program Counter
+    pub PC: VAddr,    //Program Counter
     pub A:  u8,     //Accumulator
     pub X:  u8,     //Index Register X
     pub Y:  u8,     //Index Register Y
@@ -92,19 +94,23 @@ impl CpuState {
     }
 }
 
+static RAM_SIZE: uint = 0x0800; //2 KB
+type Ram = [u8, ..RAM_SIZE];
+
 pub struct Cpu {
     state: CpuState,
-
-    pub mem: Mem,
+    cart: Cart,
+    ram: Ram,
 }
 
 impl Cpu {
-    pub fn new(mem: Mem) -> Cpu {
+    pub fn new(cart: Cart) -> Cpu {
         let cpu_state = CpuState::new();
 
         Cpu { 
             state: cpu_state,
-            mem: mem,
+            cart: cart,
+            ram: [0u8, ..RAM_SIZE],
         }
     }
 
@@ -177,7 +183,7 @@ impl Cpu {
     }
 
     //I wish I could get rid of the mod name...
-    pub fn instr_mem_read(&self, addr: u16, instr: Instruction) -> u8 {
+    pub fn instr_mem_read(&self, addr: VAddr, instr: Instruction) -> u8 {
         match instr.instr {
             isa::ADC | isa::AND | isa::ASL | isa::BIT |
             isa::CMP | isa::CPX | isa::CPY | isa::DEC |
@@ -185,46 +191,42 @@ impl Cpu {
             isa::LDA | isa::LDX | isa::LDY | isa::LSR |
             isa::ORA | isa::ROL | isa::ROR | isa::SBC 
             => {
-                self.mem.read_byte(addr)
+                self.read_byte(addr)
             }
             _ => { 0 }
         }
     }
 
-    pub fn instr_mem_write(&mut self, addr: u16, from_exec: u8, instr: Instruction) {
-        match instr.instr {
-            isa::ASL | isa::DEC | isa::INC | isa::LSR |
-            PHA
-        }
-
-        self.mem.write_byte(addr, from_exec);
+    pub fn instr_mem_write(&mut self, addr: VAddr, from_exec: u8, instr: Instruction) {
+        //TODO only allow instructions that write memory
+        self.write_byte(addr, from_exec);
     }
 
     //performs the instruction's memory read phase and returns the value 
     //read from memory
-    pub fn instr_mem_addr(&mut self, mode: AddressMode) -> u16 {
+    pub fn instr_mem_addr(&mut self, mode: AddressMode) -> VAddr {
         match mode {
-            isa::ZP      => self.read_pc_byte() as u16,
-            isa::ZPX     => (self.read_pc_byte() + self.state.X) as u16,
-            isa::ZPY     => (self.read_pc_byte() + self.state.Y) as u16,
+            isa::ZP      => self.read_pc_byte() as VAddr,
+            isa::ZPX     => (self.read_pc_byte() + self.state.X) as VAddr,
+            isa::ZPY     => (self.read_pc_byte() + self.state.Y) as VAddr,
             isa::ABS     => self.read_pc_word(),
-            isa::ABSX    => self.read_pc_word() + (self.state.X as u16), 
-            isa::ABSY    => self.read_pc_word() + (self.state.Y as u16),
+            isa::ABSX    => self.read_pc_word() + (self.state.X as VAddr), 
+            isa::ABSY    => self.read_pc_word() + (self.state.Y as VAddr),
             isa::IND     => {
-                let indirect_address: u16 = self.read_pc_word();
-                self.mem.read_word(indirect_address)
+                let indirect_address: VAddr = self.read_pc_word();
+                self.read_addr(indirect_address)
             }
             isa::IMP     => 0x0000, //implied, no memory reference
             isa::ACC     => 0x0000, //accumulator, no memory reference
             isa::IMM     => 0x0000, //immediate, pull the bytes somewhere else
             isa::REL     => 0x0000, //relative, pull the bytes somewhere else
             isa::INDX    => {
-                let indirect_address: u16 = (self.read_pc_byte() + self.state.X) as u16;
-                self.mem.read_word(indirect_address)
+                let indirect_address: VAddr = (self.read_pc_byte() + self.state.X) as VAddr;
+                self.read_addr(indirect_address)
             }
             isa::INDY    => {
-                let indirect_address: u16 = self.read_pc_byte() as u16;
-                self.mem.read_word(indirect_address) + (self.state.Y as u16)
+                let indirect_address: VAddr = self.read_pc_byte() as VAddr;
+                self.read_addr(indirect_address) + (self.state.Y as VAddr)
             }
 
             _ => { error!("Impossible match"); 0 }
@@ -233,18 +235,127 @@ impl Cpu {
 
     //this function will read the byte at PC and increment PC by 1
     fn read_pc_byte(&mut self) -> u8 {
-        let byte = self.mem.read_byte(self.state.PC);
+        let byte = self.read_byte(self.state.PC);
         self.state.PC += 1;
         byte
     }
 
     //this function will read the next two bytes at PC and increment it by 2
     //if (PC) is 0xAA and (PC + 1) is 0xBB, the output of this will be 0xBBAA
-    fn read_pc_word(&mut self) -> u16 {
+    fn read_pc_word(&mut self) -> VAddr {
         let lo: u8 = self.read_pc_byte();
         let hi: u8 = self.read_pc_byte();
 
-        let word: u16 = (hi as u16) << 8 | (lo as u16);
+        let word: VAddr = (hi as VAddr) << 8 | (lo as VAddr);
         word
+    }
+
+    /// Read 2 bytes from the memory bus as an VAddr
+    pub fn read_addr(&self, virtual_address: VAddr) -> VAddr {
+        let lo: u8 = self.read_byte(virtual_address);
+        let hi: u8 = self.read_byte(virtual_address + 1);
+
+        let word: VAddr = (hi as VAddr) << 8 | (lo as VAddr);
+        word
+    }
+
+/// # Memory Map
+/// This is from http://nesdev.com/NESDoc.pdf
+///  _______________         _______________
+/// | PRG-ROM       |       |               |
+/// | Upper Bank    |       |               |
+/// |_ _ _ _ _ _ _ _| $C000 | PRG-ROM       |
+/// | PRG-ROM       |       |               |
+/// | Lower Bank    |       |               |
+/// |_______________| $8000 |_______________|
+/// | SRAM          |       | SRAM          |
+/// |_______________| $6000 |_______________|
+/// | Expansion ROM |       | Expansion ROM |
+/// |_______________| $4020 |_______________|
+/// | I/O Registers |       |               |
+/// |_ _ _ _ _ _ _ _| $4000 |               |
+/// | Mirrors       |       | I/O Registers |
+/// | $2000-$2007   |       |               |
+/// |_ _ _ _ _ _ _ _| $2008 |               |
+/// | I/O Registers |       |               |
+/// |_______________| $2000 |_______________|
+/// | Mirrors       |       |               |
+/// | $0000-$07FF   |       |               |
+/// |_ _ _ _ _ _ _ _| $0800 |               |
+/// | RAM           |       | RAM           |
+/// |_ _ _ _ _ _ _ _| $0200 |               |
+/// | Stack         |       |               |
+/// |_ _ _ _ _ _ _ _| $0100 |               |
+/// | Zero Page     |       |               |
+/// |_______________| $0000 |_______________|
+
+    //Read a byte from the memory bus
+    //
+    //TODO maybe incorporate cart into this file
+    fn read_byte(&self, virtual_address: VAddr) -> u8 {
+        if virtual_address < 0x2000 {
+            let address: uint = (virtual_address as uint) & 0x07FF; //Mirrored after 0x0800
+            self.ram[address]
+        } else if virtual_address < 0x4000 {
+            let address: uint = (virtual_address as uint) & 0x0007; //Mirrored after 0x2008
+            //TODO calls into PPU at this point
+            //TODO several of these registers are read only
+            match address {
+                0 => { 0x11 } //PPU Control Register 1
+                1 => { 0x22 } //PPU Control Register 2
+                2 => { 0x33 } //PPU Status Register
+                3 => { 0x44 } //SPR-RAM Address Register
+                4 => { 0x55 } //SPR-RAM I/O Register
+                5 => { 0x66 } //VRAM Address Register 1
+                6 => { 0x77 } //VRAM Address Register 2
+                7 => { 0x88 } //VRAM I/O Register
+                _ => { error!("Impossible"); 0x00 }
+            }
+        } else if virtual_address < 0x4020 {
+            //TODO APU Registers and I/O devices
+            0x00
+        } else if virtual_address < 0x6000 {
+            //TODO Expansion ROM
+            0x00
+        } else if virtual_address < 0x8000 {
+            //TODO SRAM
+            0x00
+        } else if virtual_address < 0xC000 {
+            self.cart.read_from_lower_bank(virtual_address & 0x3FFF)
+        } else if virtual_address <= 0xFFFF {
+            self.cart.read_from_upper_bank(virtual_address & 0x3FFF)
+        } else {
+            error!("Impossible");
+            0x00
+        }
+    }
+
+    fn write_byte(&mut self, virtual_address: VAddr, val: u8) {
+        if virtual_address < 0x2000 {
+            let address: uint = (virtual_address as uint) & 0x07FF; //Mirrored after 0x0800
+            self.ram[address] = val;
+        } else if virtual_address < 0x4000 {
+            let address: uint = (virtual_address as uint) & 0x0007; //Mirrorer after 0x2008
+            //TODO ppu
+            match address {
+                0 => { }
+                1 => { }
+                2 => { error!("PPU Status Register ($2002) is Read Only"); }
+                3 => { }
+                4 => { }
+                5 => { }
+                6 => { }
+                7 => { }
+                _ => { }
+            }
+        } else if virtual_address < 0x4020 {
+            //TODO APU Registers and I/O devices
+        } else if virtual_address < 0x6000 {
+            //TODO Expansion ROM
+        } else if virtual_address < 0x8000 {
+            //TODO SRAM
+        } else {
+            error!("Can't write to PRG-ROM");
+        }
     }
 }

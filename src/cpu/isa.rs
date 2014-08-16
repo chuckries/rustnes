@@ -1,4 +1,3 @@
-use mem::Mem;
 use cpu::CpuState;
 
 #[deriving(PartialEq, Show)]
