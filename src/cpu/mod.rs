@@ -53,8 +53,20 @@ bitflags!(
 
 impl CpuFlags {
     pub fn set_zn(&mut self, x: u8) {
+        self.remove(NZ_FLAG);
         if x == 0 { self.insert(Z_FLAG); }
         else if (x as i8) < 0 { self.insert(N_FLAG); }
+    }
+
+    //calculates overflow of a + b = c
+    pub fn set_v(&mut self, a: u8, b: u8, c: u8) {
+        self.remove(V_FLAG);
+        if (((a ^ c) & (b ^ c)) as i8) < 0 { self.insert(V_FLAG); }
+    }
+
+    pub fn set_c(&mut self, val: u16) {
+        self.remove(C_FLAG);
+        if val & !0xFF > 0 { self.insert(C_FLAG); }
     }
 
     pub fn clear(&mut self) {
@@ -149,43 +161,74 @@ impl Cpu {
         let y: u8 = self.state.Y;
         let m: u8 = match instr.address_mode {
             isa::IMM | isa::REL => { self.read_pc_byte() }
+            isa::ACC            => { self.state.A }
             _                   => { from_mem }
         };
         let mut out: u8 = 0;
         match instr.instr {
-            isa::ADC => { // A + M + C -> A and C
+            //Load and Store
+            isa::LDA => { self.state.A = m; self.state.P.set_zn(m); }
+            isa::LDX => { self.state.X = m; self.state.P.set_zn(m); }
+            isa::LDY => { self.state.Y = m; self.state.P.set_zn(m); }
+            isa::STA => { out = self.state.A; }
+            isa::STX => { out = self.state.X; }
+            isa::STY => { out = self.state.Y; }
+
+            //Airthmetic
+            isa::ADC => { 
                 let val: u16 = (a as u16) + (m as u16) + ((self.state.P & C_FLAG).bits as u16);
-                self.state.P.remove(NVZC_FLAG);
-                if val & !0xFF > 0 { self.state.P.insert(C_FLAG); }
+                self.state.P.set_c(val);
                 let val: u8 = val as u8;
-                if (((a ^ val) & (m ^ val)) as i8) < 0 { self.state.P.insert(V_FLAG); } //thanks to http://www.opensourceforu.com/2009/03/joy-of-programming-how-to-detect-integer-overflow/
+                self.state.P.set_v(a, m, val);
                 self.state.P.set_zn(val);
                 self.state.A = val;
             }
             isa::SBC => {
                 let val: u16 = (a as u16) + (!m as u16) + ((self.state.P & C_FLAG).bits as u16); //yup, subtraction looks weird. see SBC at http://users.telenet.be/kim1-6502/6502/proman.html#222
-                self.state.P.remove(NVZC_FLAG);
-                if val & !0xFF > 0 { self.state.P.insert(C_FLAG); }
+                self.state.P.set_c(val);
                 let val: u8 = val as u8;
-                //since SBC is A - M - !C = result, it's like result + M + !C = A, so overflow can
-                //be done with (A ^ result) & (A ^ M) < 0, which is the same idea as ADC
-                if (((a ^ val) & (a ^ m)) as i8) < 0 { self.state.P.insert(V_FLAG); } //I found this slick implementation at http://nesdev.com/6502.txt
+                self.state.P.set_v(val, m, a);
                 self.state.P.set_zn(val);
                 self.state.A = val;
             }
-            isa::STA => { out = self.state.A; }
-            isa::STX => { out = self.state.X; }
-            isa::STY => { out = self.state.Y; }
-            isa::LDA => { self.state.A = m; self.state.P.set_zn(m); }
-            isa::LDX => { self.state.X = m; self.state.P.set_zn(m); }
-            isa::LDY => { self.state.Y = m; self.state.P.set_zn(m); }
+            isa::INC => { out = m + 1; self.state.P.set_zn(out); }
+            isa::INX => { self.state.X += 1; self.state.P.set_zn(self.state.X); }
+            isa::INY => { self.state.Y += 1; self.state.P.set_zn(self.state.Y); }
+            isa::DEC => { out = m - 1; self.state.P.set_zn(out); }
+            isa::DEX => { self.state.X -= 1; self.state.P.set_zn(self.state.X); }
+            isa::DEY => { self.state.Y -= 1; self.state.P.set_zn(self.state.Y); }
+
+            //Shift and Rotate
+            isa::ASL => { 
+                let val: u16 = (m as u16) << 1;
+                self.state.P.set_c(val);
+                let val: u8 = val as u8;
+                self.state.P.set_zn(val);
+                out = val;
+            }
+            isa::LSR => {
+                self.state.P.remove(C_FLAG);
+                if (m & C_FLAG.bits) > 0 { self.state.P.insert(C_FLAG); }
+                out = (m >> 1) & 0x7F;
+                self.state.P.set_zn(out);
+            }
+            isa::ROL => {
+                out = (m << 1) | (self.state.P.bits & C_FLAG.bits);
+                self.state.P.set_c((m as u16) << 1);
+                self.state.P.set_zn(out);
+            }
+            isa::ROR => {
+                out = (m >> 1) | if (self.state.P.contains(C_FLAG)) { 0x80 } else { 0x00 };
+                self.state.P.remove(C_FLAG);
+                if m & 0x01 > 0 { self.state.P.insert(C_FLAG); }
+                self.state.P.set_zn(out);
+            }
             _ => { error!("Unimplemented instruction"); }
         }
 
         out
     }
 
-    //I wish I could get rid of the mod name...
     pub fn instr_mem_read(&self, addr: VAddr, instr: Instruction) -> u8 {
         match instr.instr {
             isa::ADC | isa::AND | isa::ASL | isa::BIT |
@@ -201,14 +244,18 @@ impl Cpu {
     }
 
     pub fn instr_mem_write(&mut self, addr: VAddr, from_exec: u8, instr: Instruction) {
-        match instr.instr {
-            isa::ASL | isa::DEC | isa::INC | isa::LSR |
-            isa::ROL | isa::ROR | isa::STA | isa::STX |
-            isa::STY 
-            => {
-                self.write_byte(addr, from_exec);
+        if instr.address_mode == isa::ACC {
+            self.state.A = from_exec;
+        } else {
+            match instr.instr {
+                isa::ASL | isa::DEC | isa::INC | isa::LSR |
+                isa::ROL | isa::ROR | isa::STA | isa::STX |
+                isa::STY 
+                => {
+                    self.write_byte(addr, from_exec);
+                }
+                _ => { }
             }
-            _ => { }
         }
     }
 

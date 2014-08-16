@@ -665,3 +665,29 @@ fn cpu_instr_stx_test() {
     cpu.instr_run();
     assert_eq!(cpu.ram[0xFF], 0xFF);
 }
+
+#[test]
+fn cpu_instr_sty_test() {
+    let mut prg_rom_bank = prg_rom_bank!(0xC5);
+
+    //STX ZP 0x00
+    prg_rom_bank[0x0000] = 0x84;
+    prg_rom_bank[0x0001] = 0x00;
+
+    //STX ZP 0xFF
+    prg_rom_bank[0x0002] = 0x84;
+    prg_rom_bank[0x0003] = 0xFF;
+
+    let mut cpu = cpu!(prg_rom!(prg_rom_bank, prg_rom_bank!(0xC5)), ram!(0xC5));
+    cpu.state.PC = 0x8000;
+
+    cpu.state.Y = 0x00;
+    assert_eq!(cpu.ram[0x00], 0xC5);
+    cpu.instr_run();
+    assert_eq!(cpu.ram[0x00], 0x00);
+
+    cpu.state.Y = 0xFF;
+    assert_eq!(cpu.ram[0xFF], 0xC5);
+    cpu.instr_run();
+    assert_eq!(cpu.ram[0xFF], 0xFF);
+}
