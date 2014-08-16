@@ -9,6 +9,9 @@ macro_rules! ram(
     () => (
         get_empty_ram()
     );
+    ($init:expr) => (
+        get_initialized_ram($init);
+    );
 )
 
 macro_rules! mem(
@@ -25,6 +28,10 @@ macro_rules! mem(
 
 pub fn get_empty_ram() -> Ram {
     [0u8, ..RAM_SIZE]
+}
+
+pub fn get_initialized_ram(init: u8) -> Ram {
+    [init, ..RAM_SIZE]
 }
 
 pub fn get_empty_mem() -> Mem {

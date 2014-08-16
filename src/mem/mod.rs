@@ -44,7 +44,7 @@ static RAM_SIZE: uint = 0x0800; //2 KB
 pub struct Mem {
     //used for reading PRG_ROM (and others?) from the cartridge
     cart: Cart, 
-    ram: Ram,
+    pub ram: Ram,
 }
 
 impl Mem {
@@ -77,7 +77,7 @@ impl Mem {
                 _ => { error!("Impossible"); 0x00 }
             }
         } else if virtual_address < 0x4020 {
-            //TODO APU Registers 
+            //TODO APU Registers and I/O devices
             0x00
         } else if virtual_address < 0x6000 {
             //TODO Expansion ROM
@@ -103,8 +103,33 @@ impl Mem {
         word
     }
 
-    pub fn write_byte(&self, virtual_address: u16, val: u8) {
-        //todo
+    pub fn write_byte(&mut self, virtual_address: u16, val: u8) {
+        if virtual_address < 0x2000 {
+            let address: uint = (virtual_address as uint) & 0x07FF; //Mirrored after 0x0800
+            self.ram[address] = val;
+        } else if virtual_address < 0x4000 {
+            let address: uint = (virtual_address as uint) & 0x0007; //Mirrorer after 0x2008
+            //TODO ppu
+            match address {
+                0 => { }
+                1 => { }
+                2 => { error!("PPU Status Register ($2002) is Read Only"); }
+                3 => { }
+                4 => { }
+                5 => { }
+                6 => { }
+                7 => { }
+                _ => { }
+            }
+        } else if virtual_address < 0x4020 {
+            //TODO APU Registers and I/O devices
+        } else if virtual_address < 0x6000 {
+            //TODO Expansion ROM
+        } else if virtual_address < 0x8000 {
+            //TODO SRAM
+        } else {
+            error!("Can't write to PRG-ROM");
+        }
     }
 }
 

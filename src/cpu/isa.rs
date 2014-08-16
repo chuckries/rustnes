@@ -37,6 +37,22 @@ fn decode(opcode: u8) -> Option<Instruction>
             0xE1 => (SBC, INDX),
             0xF1 => (SBC, INDY),
 
+            0x85 => (STA, ZP),
+            0x95 => (STA, ZPX),
+            0x80 => (STA, ABS),
+            0x90 => (STA, ABSX),
+            0x99 => (STA, ABSY),
+            0x81 => (STA, INDX),
+            0x91 => (STA, INDY),
+
+            0x86 => (STX, ZP),
+            0x96 => (STX, ZPY),
+            0x8E => (STX, ABS),
+
+            0x84 => (STY, ZP),
+            0x94 => (STY, ZPX),
+            0x8C => (STY, ABS),
+
             _ => (INSTR_NONE, ADDRESS_MODE_NONE)
         };
 

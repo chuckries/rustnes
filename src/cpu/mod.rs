@@ -95,7 +95,7 @@ impl CpuState {
 pub struct Cpu {
     state: CpuState,
 
-    mem: Mem,
+    pub mem: Mem,
 }
 
 impl Cpu {
@@ -145,7 +145,7 @@ impl Cpu {
                 => { self.read_pc_byte() }
             _   => { from_mem }
         };
-        let out: u8 = 0;
+        let mut out: u8 = 0;
         match instr.instr {
             isa::ADC => { // A + M + C -> A and C
                 let val: u16 = (a as u16) + (m as u16) + (self.state.P & C_FLAG).bits as u16;
@@ -167,6 +167,9 @@ impl Cpu {
                 self.state.P.set_zn(val);
                 self.state.A = val;
             }
+            isa::STA => { out = self.state.A; }
+            isa::STX => { out = self.state.X; }
+            isa::STY => { out = self.state.Y; }
             _ => { error!("Unimplemented instruction"); }
         }
 
@@ -189,6 +192,11 @@ impl Cpu {
     }
 
     pub fn instr_mem_write(&mut self, addr: u16, from_exec: u8, instr: Instruction) {
+        match instr.instr {
+            isa::ASL | isa::DEC | isa::INC | isa::LSR |
+            PHA
+        }
+
         self.mem.write_byte(addr, from_exec);
     }
 

@@ -587,3 +587,63 @@ fn cpu_instr_sbc_test() {
     assert_eq!(cpu.state.A, 0x7F);
     assert_eq!(cpu.state.P, CpuFlags::none() | V_FLAG | C_FLAG);
 }
+
+#[test]
+fn cpu_instr_sta_test() {
+    let mut prg_rom_bank = prg_rom_bank!(0xC5);
+
+    //STA ZP 0x00
+    prg_rom_bank[0x0000] = 0x85;
+    prg_rom_bank[0x0001] = 0x00;
+
+    //STA ZP 0xFF
+    prg_rom_bank[0x0002] = 0x85;
+    prg_rom_bank[0x0003] = 0xFF;
+
+    let ram = ram!(0xC5);
+    let cart = cart!(prg_rom!(prg_rom_bank, prg_rom_bank!(0xC5)));
+    let mem = mem!(cart, ram);
+
+    let mut cpu = get_cpu_with_mem(mem);
+    cpu.state.PC = 0x8000;
+
+    cpu.state.A = 0x00;
+    assert_eq!(cpu.mem.ram[0x00], 0xC5);
+    cpu.instr_run();
+    assert_eq!(cpu.mem.ram[0x00], 0x00);
+
+    cpu.state.A = 0xFF;
+    assert_eq!(cpu.mem.ram[0xFF], 0xC5);
+    cpu.instr_run();
+    assert_eq!(cpu.mem.ram[0xFF], 0xFF);
+}
+
+#[test]
+fn cpu_instr_stx_test() {
+    let mut prg_rom_bank = prg_rom_bank!(0xC5);
+
+    //STX ZP 0x00
+    prg_rom_bank[0x0000] = 0x86;
+    prg_rom_bank[0x0001] = 0x00;
+
+    //STX ZP 0xFF
+    prg_rom_bank[0x0002] = 0x86;
+    prg_rom_bank[0x0003] = 0xFF;
+
+    let ram = ram!(0xC5);
+    let cart = cart!(prg_rom!(prg_rom_bank, prg_rom_bank!(0xC5)));
+    let mem = mem!(cart, ram);
+
+    let mut cpu = get_cpu_with_mem(mem);
+    cpu.state.PC = 0x8000;
+
+    cpu.state.X = 0x00;
+    assert_eq!(cpu.mem.ram[0x00], 0xC5);
+    cpu.instr_run();
+    assert_eq!(cpu.mem.ram[0x00], 0x00);
+
+    cpu.state.X = 0xFF;
+    assert_eq!(cpu.mem.ram[0xFF], 0xC5);
+    cpu.instr_run();
+    assert_eq!(cpu.mem.ram[0xFF], 0xFF);
+}
