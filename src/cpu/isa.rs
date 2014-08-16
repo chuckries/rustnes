@@ -8,7 +8,10 @@ pub struct Instruction {
 
 impl Instruction {
     pub fn new(opcode: u8) -> Instruction {
-        decode(opcode).unwrap() //TODO error message here with opcode
+        match decode(opcode) {
+            Some(instr) => { instr }
+            None => { println!("Decode failed. Op Code: {:X}", opcode); fail!("FAIL"); }
+        }
     }
 }
 

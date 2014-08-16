@@ -10,12 +10,11 @@ use self::isa::{
 
 mod isa;
 
-#[cfg(test)] mod test;
+#[cfg(test)] 
+mod test;
 
 //VAddr represents an NES virtual address
 type VAddr = u16;
-
-
 
 /// # Status Register (P)
 ///
@@ -292,11 +291,12 @@ impl Cpu {
 
     //Read a byte from the memory bus
     fn read_byte(&self, virtual_address: VAddr) -> u8 {
+        println!("Virtual Address: {:X}", virtual_address);
         if virtual_address < 0x2000 {
-            let address: uint = (virtual_address as uint) & 0x07FF; //Mirrored after 0x0800
+            let address: uint = (virtual_address & 0x07FF) as uint; //Mirrored after 0x0800
             self.ram[address]
         } else if virtual_address < 0x4000 {
-            let address: uint = (virtual_address as uint) & 0x0007; //Mirrored after 0x2008
+            let address: uint = (virtual_address & 0x0007) as uint; //Mirrored after 0x2008
             //TODO calls into PPU at this point
             //TODO several of these registers are read only
             match address {
@@ -323,10 +323,10 @@ impl Cpu {
         
         //TODO I need to implement mapping at some point
         else if virtual_address < 0xC000 {
-            let address = 0x3FFF;
+            let address = (virtual_address & 0x3FFF) as uint;
             self.prg_rom[0][address]
         } else { // if virtual_address <= 0xFFFF
-            let address = 0x3FFF;
+            let address = (virtual_address & 0x3FFF) as uint;
             self.prg_rom[1][address]
         }
     }

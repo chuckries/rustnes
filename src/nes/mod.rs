@@ -1,7 +1,12 @@
+#![macro_escape]
+
 use std::io::File;
 use std::mem;
 
 use cpu::Cpu;
+
+#[cfg(test)]
+pub mod test;
 
 static PRG_ROM_BANK_SIZE: uint = 0x4000; //16 KB
 type PrgRomBank = [u8, ..PRG_ROM_BANK_SIZE];
