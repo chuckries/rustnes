@@ -81,7 +81,7 @@ fn cpu_sanity_test() {
     prg_rom_bank[0x0000] = 0x65;
     prg_rom_bank[0x0001] = 0xAA; 
 
-    let mut prg_rom = vec![prg_rom_bank, get_initialized_prg_rom_bank(0xC5)];
+    let mut prg_rom = prg_rom!(prg_rom_bank, prg_rom_bank!(0xC5));
 
     let mut ram = ram!(0xC5);
 
@@ -109,13 +109,12 @@ fn cpu_sanity_test() {
     assert_eq!(cpu.state.A, 0x02);
 }
 
-/*
 #[test]
 fn cpu_instr_mem_addr_zp_test() {
     let mut prg_rom_bank = prg_rom_bank!(0xC5);
     prg_rom_bank[0] = 0xAA;
 
-    let mut cpu = get_cpu_with_cart(cart!(prg_rom!(prg_rom_bank, prg_rom_bank!(0xC5))));
+    let mut cpu = cpu!(prg_rom!(prg_rom_bank, prg_rom_bank!(0xC5)));
     cpu.state.PC = 0x8000;
     
     //$AA
@@ -129,7 +128,7 @@ fn cpu_instr_mem_addr_zpx_test() {
     prg_rom_bank[0] = 0xF0;
     prg_rom_bank[1] = 0xFF;
 
-    let mut cpu = get_cpu_with_cart(cart!(prg_rom!(prg_rom_bank, prg_rom_bank!(0xC5))));
+    let mut cpu = cpu!(prg_rom!(prg_rom_bank, prg_rom_bank!(0xC5)));
     cpu.state.PC = 0x8000;
     cpu.state.X = 0x0F;
     
@@ -148,7 +147,7 @@ fn cpu_instr_mem_addr_zpy_test() {
     prg_rom_bank[0] = 0xF0;
     prg_rom_bank[1] = 0xFF;
 
-    let mut cpu = get_cpu_with_cart(cart!(prg_rom!(prg_rom_bank, prg_rom_bank!(0xC5))));
+    let mut cpu = cpu!(prg_rom!(prg_rom_bank, prg_rom_bank!(0xC5)));
     cpu.state.PC = 0x8000;
     cpu.state.Y = 0x0F;
     
@@ -167,7 +166,7 @@ fn cpu_instr_mem_addr_abs_test() {
     prg_rom_bank[0] = 0xAA;
     prg_rom_bank[1] = 0xBB;
 
-    let mut cpu = get_cpu_with_cart(cart!(prg_rom!(prg_rom_bank, prg_rom_bank!(0xC5))));
+    let mut cpu = cpu!(prg_rom!(prg_rom_bank, prg_rom_bank!(0xC5)));
     cpu.state.PC = 0x8000;
     
     //$BBAA
@@ -183,7 +182,7 @@ fn cpu_instr_mem_addr_absx_test() {
     prg_rom_bank[2] = 0xFF;
     prg_rom_bank[3] = 0xFF;
 
-    let mut cpu = get_cpu_with_cart(cart!(prg_rom!(prg_rom_bank, prg_rom_bank!(0xC5))));
+    let mut cpu = cpu!(prg_rom!(prg_rom_bank, prg_rom_bank!(0xC5)));
     cpu.state.PC = 0x8000;
     cpu.state.X = 2;
     
@@ -204,7 +203,7 @@ fn cpu_instr_mem_addr_absy_test() {
     prg_rom_bank[2] = 0xFF;
     prg_rom_bank[3] = 0xFF;
 
-    let mut cpu = get_cpu_with_cart(cart!(prg_rom!(prg_rom_bank, prg_rom_bank!())));
+    let mut cpu = cpu!(prg_rom!(prg_rom_bank, prg_rom_bank!()));
     cpu.state.PC = 0x8000;
     cpu.state.Y = 2;
     
@@ -236,7 +235,7 @@ fn cpu_instr_mem_addr_ind_test() {
     prg_rom_bank_1[0x00AA] = 0xEE;
     prg_rom_bank_1[0x00AB] = 0xFF;
 
-    let mut cpu = get_cpu_with_cart(cart!(prg_rom!(prg_rom_bank_0, prg_rom_bank_1)));
+    let mut cpu = cpu!(prg_rom!(prg_rom_bank_0, prg_rom_bank_1));
     cpu.state.PC = 0x8000;
     
     //[ $CC ] $80AA
@@ -254,7 +253,7 @@ fn cpu_instr_mem_addr_ind_test() {
 
 #[test]
 fn cpu_instr_mem_addr_imp_test() {
-    let mut cpu = get_cpu_with_cart(cart!(prg_rom!()));
+    let mut cpu = cpu!(prg_rom!());
 
     assert_eq!(cpu.instr_mem_addr(isa::IMP), 0x0000);
     assert_eq!(cpu.state.PC, 0x0000);
@@ -262,7 +261,7 @@ fn cpu_instr_mem_addr_imp_test() {
 
 #[test]
 fn cpu_instr_mem_addr_acc_test() {
-    let mut cpu = get_cpu_with_cart(cart!(prg_rom!()));
+    let mut cpu = cpu!(prg_rom!());
 
     assert_eq!(cpu.instr_mem_addr(isa::ACC), 0x0000);
     assert_eq!(cpu.state.PC, 0x0000);
@@ -270,7 +269,7 @@ fn cpu_instr_mem_addr_acc_test() {
 
 #[test]
 fn cpu_instr_mem_addr_imm_test() {
-    let mut cpu = get_cpu_with_cart(cart!(prg_rom!()));
+    let mut cpu = cpu!(prg_rom!());
 
     assert_eq!(cpu.instr_mem_addr(isa::IMM), 0x0000);
     assert_eq!(cpu.state.PC, 0x0000);
@@ -278,7 +277,7 @@ fn cpu_instr_mem_addr_imm_test() {
 
 #[test]
 fn cpu_instr_mem_addr_rel_test() {
-    let mut cpu = get_cpu_with_cart(cart!(prg_rom!()));
+    let mut cpu = cpu!(prg_rom!());
 
     assert_eq!(cpu.instr_mem_addr(isa::REL), 0x0000);
     assert_eq!(cpu.state.PC, 0x0000);
@@ -297,10 +296,7 @@ fn cpu_instr_mem_addr_indx_test() {
     ram[0x01] = 0xDD;
     ram[0x02] = 0xEE;
 
-    let cart = cart!(prg_rom!(prg_rom_bank, prg_rom_bank!(0xC5)));
-    let mem = mem!(cart, ram);
-
-    let mut cpu = get_cpu_with_mem(mem);
+    let mut cpu = cpu!(prg_rom!(prg_rom_bank, prg_rom_bank!(0xC5)), ram);
     cpu.state.PC = 0x8000;
     cpu.state.X = 0x02;
 
@@ -330,10 +326,7 @@ fn cpu_instr_mem_addr_indy_test() {
     ram[0xCC] = 0xFF;
     ram[0xCD] = 0xFF;
 
-    let cart = cart!(prg_rom!(prg_rom_bank, prg_rom_bank!(0xC5)));
-    let mem = mem!(cart, ram);
-
-    let mut cpu = get_cpu_with_mem(mem);
+    let mut cpu = cpu!(prg_rom!(prg_rom_bank, prg_rom_bank!(0xC5)), ram);
     cpu.state.PC = 0x8000;
     cpu.state.Y = 0x02;
 
@@ -413,9 +406,7 @@ fn cpu_instr_adc_test() {
     prg_rom_bank[0x0018] = 0x69;
     prg_rom_bank[0x0019] = 0x40;
 
-    let mem = mem!(cart!(prg_rom!(prg_rom_bank, prg_rom_bank!(0xC5))));
-
-    let mut cpu = get_cpu_with_mem(mem);
+    let mut cpu = cpu!(prg_rom!(prg_rom_bank, prg_rom_bank!(0xC5)));
     cpu.state.PC = 0x8000;
 
     //ADC IMM 1 + 1, no carry
@@ -558,9 +549,7 @@ fn cpu_instr_sbc_test() {
     prg_rom_bank[0x000C] = 0xE9;
     prg_rom_bank[0x000D] = 0x40;
 
-    let mem = mem!(cart!(prg_rom!(prg_rom_bank, prg_rom_bank!(0xC5))));
-
-    let mut cpu = get_cpu_with_mem(mem);
+    let mut cpu = cpu!(prg_rom!(prg_rom_bank, prg_rom_bank!(0xC5)));
     cpu.state.PC = 0x8000;
 
     //SBC IMM 0x5 - 0x3, with carry, carry set
@@ -637,22 +626,18 @@ fn cpu_instr_sta_test() {
     prg_rom_bank[0x0002] = 0x85;
     prg_rom_bank[0x0003] = 0xFF;
 
-    let ram = ram!(0xC5);
-    let cart = cart!(prg_rom!(prg_rom_bank, prg_rom_bank!(0xC5)));
-    let mem = mem!(cart, ram);
-
-    let mut cpu = get_cpu_with_mem(mem);
+    let mut cpu = cpu!(prg_rom!(prg_rom_bank, prg_rom_bank!(0xC5)), ram!(0xC5));
     cpu.state.PC = 0x8000;
 
     cpu.state.A = 0x00;
-    assert_eq!(cpu.mem.ram[0x00], 0xC5);
+    assert_eq!(cpu.ram[0x00], 0xC5);
     cpu.instr_run();
-    assert_eq!(cpu.mem.ram[0x00], 0x00);
+    assert_eq!(cpu.ram[0x00], 0x00);
 
     cpu.state.A = 0xFF;
-    assert_eq!(cpu.mem.ram[0xFF], 0xC5);
+    assert_eq!(cpu.ram[0xFF], 0xC5);
     cpu.instr_run();
-    assert_eq!(cpu.mem.ram[0xFF], 0xFF);
+    assert_eq!(cpu.ram[0xFF], 0xFF);
 }
 
 #[test]
@@ -667,35 +652,16 @@ fn cpu_instr_stx_test() {
     prg_rom_bank[0x0002] = 0x86;
     prg_rom_bank[0x0003] = 0xFF;
 
-    let ram = ram!(0xC5);
-    let cart = cart!(prg_rom!(prg_rom_bank, prg_rom_bank!(0xC5)));
-    let mem = mem!(cart, ram);
-
-    let mut cpu = get_cpu_with_mem(mem);
+    let mut cpu = cpu!(prg_rom!(prg_rom_bank, prg_rom_bank!(0xC5)), ram!(0xC5));
     cpu.state.PC = 0x8000;
 
     cpu.state.X = 0x00;
-    assert_eq!(cpu.mem.ram[0x00], 0xC5);
+    assert_eq!(cpu.ram[0x00], 0xC5);
     cpu.instr_run();
-    assert_eq!(cpu.mem.ram[0x00], 0x00);
+    assert_eq!(cpu.ram[0x00], 0x00);
 
     cpu.state.X = 0xFF;
-    assert_eq!(cpu.mem.ram[0xFF], 0xC5);
+    assert_eq!(cpu.ram[0xFF], 0xC5);
     cpu.instr_run();
-    assert_eq!(cpu.mem.ram[0xFF], 0xFF);
+    assert_eq!(cpu.ram[0xFF], 0xFF);
 }
-*/
-
-//TODO This moved from the old car test. Do something with it
-/*
-#[test]
-fn cart_read_default_prg_rom_banks_test() {
-    let prg_rom = vec![prg_rom_bank!(0xAA), prg_rom_bank!(0xBB)];
-
-    let cart = cart!(prg_rom);
-    for i in range(0, cart.prg_rom.len() as u16) {
-        assert_eq!(cart.read_from_lower_bank(i), 0xAA as u8);
-        assert_eq!(cart.read_from_upper_bank(i), 0xBB as u8);
-    }
-}
-*/
