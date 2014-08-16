@@ -1,3 +1,5 @@
+#[macro_escape]
+
 use nes::{PrgRom};
 use nes::test::*;
 
@@ -5,12 +7,37 @@ use cpu::{Cpu, CpuState, CpuFlags, Ram, RAM_SIZE};
 use cpu::{C_FLAG, Z_FLAG, I_FLAG, D_FLAG, B_FLAG, X_FLAG, V_FLAG, N_FLAG};
 use cpu::isa;
 
+macro_rules! cpu(
+    () => (
+        get_empty_cpu_state()
+    );
+    ($prg_rom:expr) => (
+        get_cpu_with_prg_rom($prg_rom)
+    );
+    ($prg_rom:expr, $ram:expr) => (
+        get_cpu_with_prg_rom_and_ram($prg_rom, $ram)
+    );
+)
+
+macro_rules! ram(
+    () => (
+        get_empty_ram()
+    );
+    ($init:expr) => (
+        get_initialized_ram($init)
+    );
+)
+
 fn get_empty_cpu_state() -> CpuState {
     CpuState::new()
 }
 
 fn get_empty_ram() -> Ram {
     [0u8, ..RAM_SIZE]
+}
+
+fn get_initialized_ram(init: u8) -> Ram {
+    [init, ..RAM_SIZE]
 }
 
 fn get_empty_cpu() -> Cpu {
@@ -48,7 +75,7 @@ fn get_cpu_with_prg_rom_and_ram(prg_rom: PrgRom, ram: Ram) -> Cpu {
 
 #[test]
 fn cpu_sanity_test() {
-    let mut prg_rom_bank = get_initialized_prg_rom_bank(0xC5);
+    let mut prg_rom_bank = prg_rom_bank!(0xC5);
 
     //ADC $AA
     prg_rom_bank[0x0000] = 0x65;
@@ -56,11 +83,11 @@ fn cpu_sanity_test() {
 
     let mut prg_rom = vec![prg_rom_bank, get_initialized_prg_rom_bank(0xC5)];
 
-    let mut ram = get_empty_ram();
+    let mut ram = ram!(0xC5);
 
     ram[0xAA] = 0x01;
 
-    let mut cpu = get_cpu_with_prg_rom_and_ram(prg_rom, ram);
+    let mut cpu = cpu!(prg_rom, ram);
 
     cpu.state.PC = 0x8000;
     cpu.state.A = 0x01;

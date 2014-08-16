@@ -1,3 +1,5 @@
+#[macro_escape]
+
 use std::fmt;
 
 use nes::{PrgRom};
@@ -147,9 +149,8 @@ impl Cpu {
         let x: u8 = self.state.X;
         let y: u8 = self.state.Y;
         let m: u8 = match instr.address_mode {
-            isa::IMM | isa::REL    
-                => { self.read_pc_byte() }
-            _   => { from_mem }
+            isa::IMM | isa::REL => { self.read_pc_byte() }
+            _                   => { from_mem }
         };
         let mut out: u8 = 0;
         match instr.instr {
@@ -176,6 +177,9 @@ impl Cpu {
             isa::STA => { out = self.state.A; }
             isa::STX => { out = self.state.X; }
             isa::STY => { out = self.state.Y; }
+            isa::LDA => { self.state.A = m; self.state.P.set_zn(m); }
+            isa::LDX => { self.state.X = m; self.state.P.set_zn(m); }
+            isa::LDY => { self.state.Y = m; self.state.P.set_zn(m); }
             _ => { error!("Unimplemented instruction"); }
         }
 
