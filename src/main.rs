@@ -1,6 +1,6 @@
 extern crate rustnes;
 
-use rustnes::nes::Nes;
+use rustnes::Nes;
 
 use std::os;
 

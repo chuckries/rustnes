@@ -3,9 +3,10 @@
 
 #[phase(plugin, link)] extern crate log;
 
-mod cpu;
+pub use nes::{Nes};
 
-pub mod nes;
+mod nes;
+mod cpu;
 
 #[cfg(test)]
 mod test {
