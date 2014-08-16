@@ -74,8 +74,7 @@ impl fmt::Show for CpuFlags {
 
 #[allow(uppercase_variables)]
 struct CpuState {
-    //registers
-    pub PC: VAddr,    //Program Counter
+    pub PC: VAddr,  //Program Counter
     pub A:  u8,     //Accumulator
     pub X:  u8,     //Index Register X
     pub Y:  u8,     //Index Register Y
@@ -155,7 +154,7 @@ impl Cpu {
         let mut out: u8 = 0;
         match instr.instr {
             isa::ADC => { // A + M + C -> A and C
-                let val: u16 = (a as u16) + (m as u16) + (self.state.P & C_FLAG).bits as u16;
+                let val: u16 = (a as u16) + (m as u16) + ((self.state.P & C_FLAG).bits as u16);
                 self.state.P.remove(NVZC_FLAG);
                 if val & !0xFF > 0 { self.state.P.insert(C_FLAG); }
                 let val: u8 = val as u8;
@@ -164,7 +163,7 @@ impl Cpu {
                 self.state.A = val;
             }
             isa::SBC => {
-                let val: u16 = (a as u16) + (!m as u16) + (self.state.P & C_FLAG).bits as u16; //yup, subtraction looks weird. see SBC at http://users.telenet.be/kim1-6502/6502/proman.html#222
+                let val: u16 = (a as u16) + (!m as u16) + ((self.state.P & C_FLAG).bits as u16); //yup, subtraction looks weird. see SBC at http://users.telenet.be/kim1-6502/6502/proman.html#222
                 self.state.P.remove(NVZC_FLAG);
                 if val & !0xFF > 0 { self.state.P.insert(C_FLAG); }
                 let val: u8 = val as u8;
@@ -202,8 +201,15 @@ impl Cpu {
     }
 
     pub fn instr_mem_write(&mut self, addr: VAddr, from_exec: u8, instr: Instruction) {
-        //TODO only allow instructions that write memory
-        self.write_byte(addr, from_exec);
+        match instr.instr {
+            isa::ASL | isa::DEC | isa::INC | isa::LSR |
+            isa::ROL | isa::ROR | isa::STA | isa::STX |
+            isa::STY 
+            => {
+                self.write_byte(addr, from_exec);
+            }
+            _ => { }
+        }
     }
 
     //performs the instruction's memory read phase and returns the value 

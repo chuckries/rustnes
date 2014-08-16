@@ -40,11 +40,8 @@ impl Nes {
         let (rom_header, prg_rom, chr_rom) = Nes::read_rom(&rom_path);
 
         //TODO Get things like horizontal/vertical scrolling here
-        
-        //construct the cpu, passing in mem. This will allow the cpu
-        //to call virtual addresses only, and mem will route correctly 
-        //behind the scenes
-        info!("Constructing cpu");
+
+
         let cpu = Cpu::new(prg_rom);
 
         //hand back a Nes struct. At this point it only has ownership of the Cpu.
