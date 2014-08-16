@@ -657,5 +657,18 @@ fn cpu_instr_stx_test() {
     cpu.instr_run();
     assert_eq!(cpu.mem.ram[0xFF], 0xFF);
 }
+*/
 
+//TODO This moved from the old car test. Do something with it
+/*
+#[test]
+fn cart_read_default_prg_rom_banks_test() {
+    let prg_rom = vec![prg_rom_bank!(0xAA), prg_rom_bank!(0xBB)];
+
+    let cart = cart!(prg_rom);
+    for i in range(0, cart.prg_rom.len() as u16) {
+        assert_eq!(cart.read_from_lower_bank(i), 0xAA as u8);
+        assert_eq!(cart.read_from_upper_bank(i), 0xBB as u8);
+    }
+}
 */
