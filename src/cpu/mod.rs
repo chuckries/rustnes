@@ -155,7 +155,7 @@ impl Cpu {
     }
 
 
-    pub fn instr_exec(&mut self, instr: Instr, from_mem: u8) -> u8 {
+    fn instr_exec(&mut self, instr: Instr, from_mem: u8) -> u8 {
         let a: u8 = self.state.A;
         let x: u8 = self.state.X;
         let y: u8 = self.state.Y;
@@ -378,10 +378,9 @@ impl Cpu {
             addr as u8
         } else {
             match instr.instr {
-                //TODO remove jumps
                 isa::ADC | isa::AND | isa::ASL | isa::BIT |
                 isa::CMP | isa::CPX | isa::CPY | isa::DEC |
-                isa::EOR | isa::INC | isa::JMP | isa::JSR |
+                isa::EOR | isa::INC | 
                 isa::LDA | isa::LDX | isa::LDY | isa::LSR |
                 isa::ORA | isa::ROL | isa::ROR | isa::SBC 
                 => {
@@ -537,7 +536,6 @@ impl Cpu {
 
     //Read a byte from the memory bus
     fn read_byte(&self, virtual_address: VAddr) -> u8 {
-        println!("Virtual Address: {:X}", virtual_address);
         if virtual_address < 0x2000 {
             let address: uint = (virtual_address & 0x07FF) as uint; //Mirrored after 0x0800
             self.ram[address]
