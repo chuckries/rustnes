@@ -9,7 +9,7 @@ use cpu::isa;
 
 macro_rules! cpu(
     () => (
-        get_empty_cpu_state()
+        get_empty_cpu()
     );
     ($prg_rom:expr) => (
         get_cpu_with_prg_rom($prg_rom)
@@ -269,18 +269,26 @@ fn cpu_instr_mem_addr_acc_test() {
 
 #[test]
 fn cpu_instr_mem_addr_imm_test() {
-    let mut cpu = cpu!(prg_rom!());
+    let mut prg_rom_bank = prg_rom_bank!(0xC5);
+    prg_rom_bank[0x0000] = 0xAA;
 
-    assert_eq!(cpu.instr_mem_addr(isa::IMM), 0x0000);
-    assert_eq!(cpu.state.PC, 0x0000);
+    let mut cpu = cpu!(prg_rom!(prg_rom_bank, prg_rom_bank!(0xC5)));
+    cpu.state.PC = 0x8000;
+
+    assert_eq!(cpu.instr_mem_addr(isa::IMM), 0x00AA);
+    assert_eq!(cpu.state.PC, 0x8001);
 }
 
 #[test]
 fn cpu_instr_mem_addr_rel_test() {
-    let mut cpu = cpu!(prg_rom!());
+    let mut prg_rom_bank = prg_rom_bank!(0xC5);
+    prg_rom_bank[0x0000] = 0xAA;
 
-    assert_eq!(cpu.instr_mem_addr(isa::REL), 0x0000);
-    assert_eq!(cpu.state.PC, 0x0000);
+    let mut cpu = cpu!(prg_rom!(prg_rom_bank, prg_rom_bank!(0xC5)));
+    cpu.state.PC = 0x8000;
+
+    assert_eq!(cpu.instr_mem_addr(isa::REL), 0x00AA);
+    assert_eq!(cpu.state.PC, 0x8001);
 }
 
 #[test]

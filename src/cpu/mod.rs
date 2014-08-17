@@ -159,11 +159,7 @@ impl Cpu {
         let a: u8 = self.state.A;
         let x: u8 = self.state.X;
         let y: u8 = self.state.Y;
-        let m: u8 = match instr.address_mode {
-            isa::IMM | isa::REL => { self.read_pc_byte() }
-            isa::ACC            => { self.state.A }
-            _                   => { from_mem }
-        };
+        let m: u8 = from_mem;
         let mut out: u8 = 0;
         match instr.instr {
             //Load and Store
@@ -230,16 +226,24 @@ impl Cpu {
     }
 
     pub fn instr_mem_read(&self, addr: VAddr, instr: Instruction) -> u8 {
-        match instr.instr {
-            isa::ADC | isa::AND | isa::ASL | isa::BIT |
-            isa::CMP | isa::CPX | isa::CPY | isa::DEC |
-            isa::EOR | isa::INC | isa::JMP | isa::JSR |
-            isa::LDA | isa::LDX | isa::LDY | isa::LSR |
-            isa::ORA | isa::ROL | isa::ROR | isa::SBC 
-            => {
-                self.read_byte(addr)
+        let am = instr.address_mode;
+
+        if am == isa::ACC {
+            self.state.A
+        } else if am == isa::IMM || am == isa::REL {
+            addr as u8
+        } else {
+            match instr.instr {
+                isa::ADC | isa::AND | isa::ASL | isa::BIT |
+                isa::CMP | isa::CPX | isa::CPY | isa::DEC |
+                isa::EOR | isa::INC | isa::JMP | isa::JSR |
+                isa::LDA | isa::LDX | isa::LDY | isa::LSR |
+                isa::ORA | isa::ROL | isa::ROR | isa::SBC 
+                => {
+                    self.read_byte(addr)
+                }
+                _ => { 0 }
             }
-            _ => { 0 }
         }
     }
 
@@ -263,25 +267,36 @@ impl Cpu {
     //read from memory
     pub fn instr_mem_addr(&mut self, mode: AddressMode) -> VAddr {
         match mode {
-            isa::ZP      => self.read_pc_byte() as VAddr,
-            isa::ZPX     => (self.read_pc_byte() + self.state.X) as VAddr,
-            isa::ZPY     => (self.read_pc_byte() + self.state.Y) as VAddr,
-            isa::ABS     => self.read_pc_word(),
-            isa::ABSX    => self.read_pc_word() + (self.state.X as VAddr), 
-            isa::ABSY    => self.read_pc_word() + (self.state.Y as VAddr),
-            isa::IND     => {
+            isa::ZP | isa::IMM | isa::REL => { 
+                self.read_pc_byte() as VAddr 
+            }
+            isa::ZPX => { 
+                (self.read_pc_byte() + self.state.X) as VAddr
+            }
+            isa::ZPY => { 
+                (self.read_pc_byte() + self.state.Y) as VAddr
+            }
+            isa::ABS => { 
+                self.read_pc_word()
+            }
+            isa::ABSX => { 
+                self.read_pc_word() + (self.state.X as VAddr)
+            }
+            isa::ABSY => { 
+                self.read_pc_word() + (self.state.Y as VAddr)
+            }
+            isa::IND => {
                 let indirect_address: VAddr = self.read_pc_word();
                 self.read_addr(indirect_address)
             }
-            isa::IMP     => 0x0000, //implied, no memory reference
-            isa::ACC     => 0x0000, //accumulator, no memory reference
-            isa::IMM     => 0x0000, //immediate, pull the bytes somewhere else
-            isa::REL     => 0x0000, //relative, pull the bytes somewhere else
-            isa::INDX    => {
+            isa::IMP | isa::ACC => { //implied and accumulator instr's have no memory reference
+                0x0000  
+            } 
+            isa::INDX=> {
                 let indirect_address: VAddr = (self.read_pc_byte() + self.state.X) as VAddr;
                 self.read_addr(indirect_address)
             }
-            isa::INDY    => {
+            isa::INDY => {
                 let indirect_address: VAddr = self.read_pc_byte() as VAddr;
                 self.read_addr(indirect_address) + (self.state.Y as VAddr)
             }
