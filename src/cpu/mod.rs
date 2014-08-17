@@ -142,7 +142,7 @@ impl Cpu {
         let m = self.instr_mem_read(m_addr, instr);
 
         //perform the action of the operation
-        let x = self.instr_exec(m, instr);
+        let x = self.instr_exec(instr.instr, m);
         
         //write back to ram
         self.instr_mem_write(m_addr, x, instr);
@@ -155,13 +155,13 @@ impl Cpu {
     }
 
 
-    pub fn instr_exec(&mut self, from_mem: u8, instr: Instruction) -> u8 {
+    pub fn instr_exec(&mut self, instr: Instr, from_mem: u8) -> u8 {
         let a: u8 = self.state.A;
         let x: u8 = self.state.X;
         let y: u8 = self.state.Y;
         let m: u8 = from_mem;
         let mut out: u8 = 0;
-        match instr.instr {
+        match instr {
             //Load and Store
             isa::LDA => { self.state.A = m; self.state.P.set_zn(m); }
             isa::LDX => { self.state.X = m; self.state.P.set_zn(m); }

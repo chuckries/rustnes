@@ -7,6 +7,9 @@ use cpu::{Cpu, CpuState, CpuFlags, Ram, RAM_SIZE};
 use cpu::{C_FLAG, Z_FLAG, I_FLAG, D_FLAG, B_FLAG, X_FLAG, V_FLAG, N_FLAG};
 use cpu::isa;
 
+/// # Macros
+///
+///
 macro_rules! cpu(
     () => (
         get_empty_cpu()
@@ -28,6 +31,9 @@ macro_rules! ram(
     );
 )
 
+/// # Macro Helpers
+/// 
+///
 fn get_empty_cpu_state() -> CpuState {
     CpuState::new()
 }
@@ -73,6 +79,9 @@ fn get_cpu_with_prg_rom_and_ram(prg_rom: PrgRom, ram: Ram) -> Cpu {
     }
 }
 
+/// # Sanity Test
+///
+///
 #[test]
 fn cpu_sanity_test() {
     let mut prg_rom_bank = prg_rom_bank!(0xC5);
@@ -104,11 +113,14 @@ fn cpu_sanity_test() {
     let m = cpu.instr_mem_read(m_addr, instr);
     assert_eq!(m, 0x01);
     
-    let x = cpu.instr_exec(m, instr);
+    let x = cpu.instr_exec(instr.instr, m);
     assert_eq!(x, 0x00);
     assert_eq!(cpu.state.A, 0x02);
 }
 
+/// # Address Mode Tests
+///
+///
 #[test]
 fn cpu_instr_mem_addr_zp_test() {
     let mut prg_rom_bank = prg_rom_bank!(0xC5);
@@ -357,176 +369,244 @@ fn cpu_instr_mem_addr_indy_test() {
     assert_eq!(cpu.state.PC, 0x8003);
 }
 
-//TODO cycle counts
+/// # Instruction Tests
+/// 
+///
+/// ## Load and Store
 #[test]
-fn cpu_instr_adc_test() {
-    let mut prg_rom_bank = prg_rom_bank!(0xC5);
+fn cpu_instr_exec_lda_test() {
+    let mut cpu;
+    let mut x;
 
-    //ADC IMM 1 + 1, no carry, no flags set
-    prg_rom_bank[0x0000] = 0x69;
-    prg_rom_bank[0x0001] = 0x01;
-
-    //ADC IMM 1 + 1, with carry, no flags set
-    prg_rom_bank[0x0002] = 0x69;
-    prg_rom_bank[0x0003] = 0x01;
-
-    //ADC IMM 0xFF + 2, no carry, carry set
-    prg_rom_bank[0x0004] = 0x69;
-    prg_rom_bank[0x0005] = 0xFF;
-
-    //ADC IMM 0xFF + 2, with carry, carry set
-    prg_rom_bank[0x0006] = 0x69;
-    prg_rom_bank[0x0007] = 0xFF;
-
-    //ADC IMM 0x00 + 0, no carry, zero set
-    prg_rom_bank[0x0008] = 0x69;
-    prg_rom_bank[0x0009] = 0x00;
-
-    //ADC IMM 0xFF + 1, no carry, carry set, zero set
-    prg_rom_bank[0x000A] = 0x69;
-    prg_rom_bank[0x000B] = 0xFF;
-
-    //ADC IMM 0x7F + 1, no carry, overflow set, negative set
-    prg_rom_bank[0x000C] = 0x69;
-    prg_rom_bank[0x000D] = 0x7F;
-
-    //ADC IMM 0x80 + 1, no carry, negative set
-    prg_rom_bank[0x000E] = 0x69;
-    prg_rom_bank[0x000F] = 0x80;
-
-    //ADC IMM 0xFF + 0xFF, no carry, carry set, negative set
-    prg_rom_bank[0x0010] = 0x69;
-    prg_rom_bank[0x0011] = 0xFF;
-
-    //ADC IMM 0x80 + 0x80, no carry, carry set, zero set, overflow set
-    prg_rom_bank[0x0012] = 0x69;
-    prg_rom_bank[0x0013] = 0x80;
-
-    //ADC IMM 0x7F + 0x7F, no carry, overflow set, zero set
-    prg_rom_bank[0x0014] = 0x69;
-    prg_rom_bank[0x0015] = 0x7F;
-
-    //ADC IMM 0x80 + 0xFF, no carry, overflow set, carry set
-    prg_rom_bank[0x0016] = 0x69;
-    prg_rom_bank[0x0017] = 0xFF;
-
-    //ADC IMM 0x3F + 0x40, with carry, overflow set, negative set
-    prg_rom_bank[0x0018] = 0x69;
-    prg_rom_bank[0x0019] = 0x40;
-
-    let mut cpu = cpu!(prg_rom!(prg_rom_bank, prg_rom_bank!(0xC5)));
-    cpu.state.PC = 0x8000;
-
-    //ADC IMM 1 + 1, no carry
-    cpu.state.A = 1;
-    cpu.state.P.clear();
-    cpu.instr_run();
-    assert_eq!(cpu.state.PC, 0x8002);
-    assert_eq!(cpu.state.A, 2);
+    cpu = cpu!();
+    x = cpu.instr_exec(isa::LDA, 0x01);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.A, 0x01);
     assert_eq!(cpu.state.P, CpuFlags::none());
 
-    //ADC IMM 1 + 1, with carry
-    cpu.state.A = 1;
-    cpu.state.P.clear();
-    cpu.state.P.insert(C_FLAG);
-    cpu.instr_run();
-    assert_eq!(cpu.state.PC, 0x8004);
-    assert_eq!(cpu.state.A, 3);
-    assert_eq!(cpu.state.P, CpuFlags::none());
-
-    //ADC IMM 0xFF + 2, no carry
-    cpu.state.A = 2;
-    cpu.state.P.clear();
-    cpu.instr_run();
-    assert_eq!(cpu.state.PC, 0x8006);
-    assert_eq!(cpu.state.A, 1);
-    assert_eq!(cpu.state.P, CpuFlags::none() | C_FLAG);
-
-    //ADC IMM 0xFF + 2, no carry
-    cpu.state.A = 2;
-    cpu.state.P.clear();
-    cpu.state.P.insert(C_FLAG);
-    cpu.instr_run();
-    assert_eq!(cpu.state.PC, 0x8008);
-    assert_eq!(cpu.state.A, 2);
-    assert_eq!(cpu.state.P, CpuFlags::none() | C_FLAG);
-
-    //ADC IMM 0x00 + 0, no carry, zero set
-    cpu.state.A = 0;
-    cpu.state.P.clear();
-    cpu.instr_run();
-    assert_eq!(cpu.state.PC, 0x800A);
-    assert_eq!(cpu.state.A, 0);
+    cpu = cpu!();
+    x = cpu.instr_exec(isa::LDA, 0x00);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.A, 0x00);
     assert_eq!(cpu.state.P, CpuFlags::none() | Z_FLAG);
 
-    //ADC IMM 0xFF + 1, no carry, carry set, zero set
-    cpu.state.A = 1;
-    cpu.state.P.clear();
-    cpu.instr_run();
-    assert_eq!(cpu.state.PC, 0x800C);
-    assert_eq!(cpu.state.A, 0);
-    assert_eq!(cpu.state.P, CpuFlags::none() | C_FLAG | Z_FLAG);
-
-    //ADC IMM 0x7F + 1, no carry, overflow set, negative set
-    cpu.state.A = 1;
-    cpu.state.P.clear();
-    cpu.instr_run();
-    assert_eq!(cpu.state.PC, 0x800E);
-    assert_eq!(cpu.state.A, 0x80);
-    assert_eq!(cpu.state.P, CpuFlags::none() | V_FLAG | N_FLAG);
-
-    //ADC IMM 0x80 + 1, no carry, negative set
-    cpu.state.A = 1;
-    cpu.state.P.clear();
-    cpu.instr_run();
-    assert_eq!(cpu.state.PC, 0x8010);
-    assert_eq!(cpu.state.A, 0x81);
+    cpu = cpu!();
+    x = cpu.instr_exec(isa::LDA, 0xFF);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.A, 0xFF);
     assert_eq!(cpu.state.P, CpuFlags::none() | N_FLAG);
-
-    //ADC IMM 0xFF + 0xFF, no carry, carry set, negative set
-    cpu.state.A = 0xFF;
-    cpu.state.P.clear();
-    cpu.instr_run();
-    assert_eq!(cpu.state.PC, 0x8012);
-    assert_eq!(cpu.state.A, 0xFE);
-    assert_eq!(cpu.state.P, CpuFlags::none() | C_FLAG | N_FLAG);
-
-    //ADC IMM 0x80 + 0x80, no carry, carry set, overflow set
-    cpu.state.A = 0x80;
-    cpu.state.P.clear();
-    cpu.instr_run();
-    assert_eq!(cpu.state.PC, 0x8014);
-    assert_eq!(cpu.state.A, 0x00);
-    assert_eq!(cpu.state.P, CpuFlags::none() | C_FLAG | V_FLAG | Z_FLAG);
-
-    //ADC IMM 0x7F + 0x7F, no carry, overflow set, zero set
-    cpu.state.A = 0x7F;
-    cpu.state.P.clear();
-    cpu.instr_run();
-    assert_eq!(cpu.state.PC, 0x8016);
-    assert_eq!(cpu.state.A, 0xFE);
-    assert_eq!(cpu.state.P, CpuFlags::none() | V_FLAG | N_FLAG);
-
-    //ADC IMM 0x80 + 0xFF, no carry, overflow set, carry set
-    cpu.state.A = 0x80;
-    cpu.state.P.clear();
-    cpu.instr_run();
-    assert_eq!(cpu.state.PC, 0x8018);
-    assert_eq!(cpu.state.A, 0x7F);
-    assert_eq!(cpu.state.P, CpuFlags::none() | V_FLAG | C_FLAG);
-
-    //ADC IMM 0x3F + 0x40, with carry, overflow set, negative set
-    cpu.state.A = 0x3F;
-    cpu.state.P.clear();
-    cpu.state.P.insert(C_FLAG);
-    cpu.instr_run();
-    assert_eq!(cpu.state.PC, 0x801A);
-    assert_eq!(cpu.state.A, 0x80);
-    assert_eq!(cpu.state.P, CpuFlags::none() | V_FLAG | N_FLAG);
 }
 
 #[test]
-fn cpu_instr_sbc_test() {
+fn cpu_instr_exec_ldx_test() {
+    let mut cpu;
+    let mut x;
+
+    cpu = cpu!();
+    x = cpu.instr_exec(isa::LDX, 0x01);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.X, 0x01);
+    assert_eq!(cpu.state.P, CpuFlags::none());
+
+    cpu = cpu!();
+    x = cpu.instr_exec(isa::LDX, 0x00);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.X, 0x00);
+    assert_eq!(cpu.state.P, CpuFlags::none() | Z_FLAG);
+
+    cpu = cpu!();
+    x = cpu.instr_exec(isa::LDX, 0xFF);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.X, 0xFF);
+    assert_eq!(cpu.state.P, CpuFlags::none() | N_FLAG);
+}
+
+#[test]
+fn cpu_instr_exec_ldy_test() {
+    let mut cpu;
+    let mut x;
+
+    cpu = cpu!();
+    x = cpu.instr_exec(isa::LDY, 0x01);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.Y, 0x01);
+    assert_eq!(cpu.state.P, CpuFlags::none());
+
+    cpu = cpu!();
+    x = cpu.instr_exec(isa::LDY, 0x00);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.Y, 0x00);
+    assert_eq!(cpu.state.P, CpuFlags::none() | Z_FLAG);
+
+    cpu = cpu!();
+    x = cpu.instr_exec(isa::LDY, 0xFF);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.Y, 0xFF);
+    assert_eq!(cpu.state.P, CpuFlags::none() | N_FLAG);
+}
+
+#[test]
+fn cpu_instr_exec_sta_test() {
+    let mut cpu;
+    let mut x;
+
+    cpu = cpu!();
+    cpu.state.A = 0x01;
+    x = cpu.instr_exec(isa::STA, 0x00);
+    assert_eq!(x, 0x01);
+
+    cpu = cpu!();
+    cpu.state.A = 0x00;
+    x = cpu.instr_exec(isa::STA, 0x00);
+    assert_eq!(x, 0x00);
+
+    cpu = cpu!();
+    cpu.state.A = 0xFF;
+    x = cpu.instr_exec(isa::STA, 0x00);
+    assert_eq!(x, 0xFF);
+}
+
+#[test]
+fn cpu_instr_exec_stx_test() {
+    let mut cpu;
+    let mut x;
+
+    cpu = cpu!();
+    cpu.state.X = 0x01;
+    x = cpu.instr_exec(isa::STX, 0x00);
+    assert_eq!(x, 0x01);
+
+    cpu = cpu!();
+    cpu.state.X = 0x00;
+    x = cpu.instr_exec(isa::STX, 0x00);
+    assert_eq!(x, 0x00);
+
+    cpu = cpu!();
+    cpu.state.X = 0xFF;
+    x = cpu.instr_exec(isa::STX, 0x00);
+    assert_eq!(x, 0xFF);
+}
+
+#[test]
+fn cpu_instr_exec_sty_test() {
+    let mut cpu;
+    let mut x;
+
+    cpu = cpu!();
+    cpu.state.Y = 0x01;
+    x = cpu.instr_exec(isa::STY, 0x00);
+    assert_eq!(x, 0x01);
+
+    cpu = cpu!();
+    cpu.state.Y = 0x00;
+    x = cpu.instr_exec(isa::STY, 0x00);
+    assert_eq!(x, 0x00);
+
+    cpu = cpu!();
+    cpu.state.Y = 0xFF;
+    x = cpu.instr_exec(isa::STY, 0x00);
+    assert_eq!(x, 0xFF);
+}
+
+/// ## Arithmetic Tests
+#[test]
+fn cpu_instr_exec_adc_test() {
+    let mut cpu;
+    let mut x;
+
+    //ADC 0x01 + 0x01, no carry, no flags set
+    cpu = cpu!();
+    cpu.state.A = 0x01;
+    x = cpu.instr_exec(isa::ADC, 0x01);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.A, 0x02);
+    assert_eq!(cpu.state.P, CpuFlags::none());
+
+    //ADC 0x01 + 0x01, with carry, no flags set
+    cpu = cpu!();
+    cpu.state.A = 0x01;
+    cpu.state.P.insert(C_FLAG);
+    x = cpu.instr_exec(isa::ADC, 0x01);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.A, 0x03);
+    assert_eq!(cpu.state.P, CpuFlags::none());
+
+    //ADC 0xFF + 0x01, no carry, carry set, zero set
+    cpu = cpu!();
+    cpu.state.A = 0xFF;
+    x = cpu.instr_exec(isa::ADC, 0x01);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.A, 0x00);
+    assert_eq!(cpu.state.P, CpuFlags::none() | C_FLAG | Z_FLAG);
+
+    //ADC 0xFF + 0x02, no carry, carry set
+    cpu = cpu!();
+    cpu.state.A = 0xFF;
+    x = cpu.instr_exec(isa::ADC, 0x02);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.A, 0x01);
+    assert_eq!(cpu.state.P, CpuFlags::none() | C_FLAG);
+
+    //ADC 0x7F + 0x01, no carry, overflow set, negative set
+    cpu = cpu!();
+    cpu.state.A = 0x7F;
+    x = cpu.instr_exec(isa::ADC, 0x01);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.A, 0x80);
+    assert_eq!(cpu.state.P, CpuFlags::none() | V_FLAG | N_FLAG);
+
+    //ADC 0xFF + 0xFF, no carry, carry set, negative set
+    cpu = cpu!();
+    cpu.state.A = 0xFF;
+    x = cpu.instr_exec(isa::ADC, 0xFF);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.A, 0xFE);
+    assert_eq!(cpu.state.P, CpuFlags::none() | C_FLAG | N_FLAG);
+
+    //ADC 0x7F + 0x7F, no carry, overflow set, neagtive set
+    cpu = cpu!();
+    cpu.state.A = 0x7F;
+    x = cpu.instr_exec(isa::ADC, 0x7F);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.A, 0xFE);
+    assert_eq!(cpu.state.P, CpuFlags::none() | V_FLAG | N_FLAG);
+    
+    //ADC 0xFF + 0x7F, no carry, carry set
+    cpu = cpu!();
+    cpu.state.A = 0xFF;
+    x = cpu.instr_exec(isa::ADC, 0x7F);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.A, 0x7E);
+    assert_eq!(cpu.state.P, CpuFlags::none() | C_FLAG);
+
+    //ADC 0x80 + 0x80, no carry, carry set, zero set, overflow set
+    cpu = cpu!();
+    cpu.state.A = 0x80;
+    x = cpu.instr_exec(isa::ADC, 0x80);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.A, 0x00);
+    assert_eq!(cpu.state.P, CpuFlags::none() | C_FLAG | V_FLAG | Z_FLAG);
+
+    //ADC 0x80 + 0x7F, no carry, negative set
+    cpu = cpu!();
+    cpu.state.A = 0x80;
+    x = cpu.instr_exec(isa::ADC, 0x7F);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.A, 0xFF);
+    assert_eq!(cpu.state.P, CpuFlags::none() | N_FLAG);
+    
+    //ADC 0x80 + 0xFF, no carry, carry set, overflow set
+    cpu = cpu!();
+    cpu.state.A = 0x80;
+    x = cpu.instr_exec(isa::ADC, 0xFF);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.A, 0x7F);
+    assert_eq!(cpu.state.P, CpuFlags::none() | C_FLAG | V_FLAG);
+}
+
+//TODO rewrite these in the new test paradigm
+#[test]
+fn cpu_instr_exec_sbc_test() {
     let mut prg_rom_bank = prg_rom_bank!(0xC5);
 
     //SBC IMM 0x5 - 0x3, with carry, carry set
@@ -623,79 +703,221 @@ fn cpu_instr_sbc_test() {
 }
 
 #[test]
-fn cpu_instr_sta_test() {
-    let mut prg_rom_bank = prg_rom_bank!(0xC5);
+fn cpu_instr_exec_inc_test() {
+    let mut cpu;
+    let mut x;
 
-    //STA ZP 0x00
-    prg_rom_bank[0x0000] = 0x85;
-    prg_rom_bank[0x0001] = 0x00;
+    cpu = cpu!();
+    x = cpu.instr_exec(isa::INC, 0x00);
+    assert_eq!(x, 0x01);
+    assert_eq!(cpu.state.P, CpuFlags::none());
 
-    //STA ZP 0xFF
-    prg_rom_bank[0x0002] = 0x85;
-    prg_rom_bank[0x0003] = 0xFF;
+    cpu = cpu!();
+    x = cpu.instr_exec(isa::INC, 0xFF);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.P, CpuFlags::none() | Z_FLAG);
 
-    let mut cpu = cpu!(prg_rom!(prg_rom_bank, prg_rom_bank!(0xC5)), ram!(0xC5));
-    cpu.state.PC = 0x8000;
-
-    cpu.state.A = 0x00;
-    assert_eq!(cpu.ram[0x00], 0xC5);
-    cpu.instr_run();
-    assert_eq!(cpu.ram[0x00], 0x00);
-
-    cpu.state.A = 0xFF;
-    assert_eq!(cpu.ram[0xFF], 0xC5);
-    cpu.instr_run();
-    assert_eq!(cpu.ram[0xFF], 0xFF);
+    cpu = cpu!();
+    x = cpu.instr_exec(isa::INC, 0x7F);
+    assert_eq!(x, 0x80);
+    assert_eq!(cpu.state.P, CpuFlags::none() | N_FLAG);
 }
 
 #[test]
-fn cpu_instr_stx_test() {
-    let mut prg_rom_bank = prg_rom_bank!(0xC5);
+fn cpu_instr_exec_inx_test() {
+    let mut cpu;
+    let mut x;
 
-    //STX ZP 0x00
-    prg_rom_bank[0x0000] = 0x86;
-    prg_rom_bank[0x0001] = 0x00;
-
-    //STX ZP 0xFF
-    prg_rom_bank[0x0002] = 0x86;
-    prg_rom_bank[0x0003] = 0xFF;
-
-    let mut cpu = cpu!(prg_rom!(prg_rom_bank, prg_rom_bank!(0xC5)), ram!(0xC5));
-    cpu.state.PC = 0x8000;
-
+    cpu = cpu!();
     cpu.state.X = 0x00;
-    assert_eq!(cpu.ram[0x00], 0xC5);
-    cpu.instr_run();
-    assert_eq!(cpu.ram[0x00], 0x00);
+    x = cpu.instr_exec(isa::INX, 0x00);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.X, 0x01);
+    assert_eq!(cpu.state.P, CpuFlags::none());
 
+    cpu = cpu!();
     cpu.state.X = 0xFF;
-    assert_eq!(cpu.ram[0xFF], 0xC5);
-    cpu.instr_run();
-    assert_eq!(cpu.ram[0xFF], 0xFF);
+    x = cpu.instr_exec(isa::INX, 0x00);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.X, 0x00);
+    assert_eq!(cpu.state.P, CpuFlags::none() | Z_FLAG);
+
+    cpu = cpu!();
+    cpu.state.X = 0x7F;
+    x = cpu.instr_exec(isa::INX, 0x00);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.X, 0x80);
+    assert_eq!(cpu.state.P, CpuFlags::none() | N_FLAG);
 }
 
 #[test]
-fn cpu_instr_sty_test() {
-    let mut prg_rom_bank = prg_rom_bank!(0xC5);
+fn cpu_instr_exec_iny_test() {
+    let mut cpu;
+    let mut x;
 
-    //STX ZP 0x00
-    prg_rom_bank[0x0000] = 0x84;
-    prg_rom_bank[0x0001] = 0x00;
-
-    //STX ZP 0xFF
-    prg_rom_bank[0x0002] = 0x84;
-    prg_rom_bank[0x0003] = 0xFF;
-
-    let mut cpu = cpu!(prg_rom!(prg_rom_bank, prg_rom_bank!(0xC5)), ram!(0xC5));
-    cpu.state.PC = 0x8000;
-
+    cpu = cpu!();
     cpu.state.Y = 0x00;
-    assert_eq!(cpu.ram[0x00], 0xC5);
-    cpu.instr_run();
-    assert_eq!(cpu.ram[0x00], 0x00);
+    x = cpu.instr_exec(isa::INY, 0x00);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.Y, 0x01);
+    assert_eq!(cpu.state.P, CpuFlags::none());
 
+    cpu = cpu!();
     cpu.state.Y = 0xFF;
-    assert_eq!(cpu.ram[0xFF], 0xC5);
-    cpu.instr_run();
-    assert_eq!(cpu.ram[0xFF], 0xFF);
+    x = cpu.instr_exec(isa::INY, 0x00);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.Y, 0x00);
+    assert_eq!(cpu.state.P, CpuFlags::none() | Z_FLAG);
+
+    cpu = cpu!();
+    cpu.state.Y = 0x7F;
+    x = cpu.instr_exec(isa::INY, 0x00);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.Y, 0x80);
+    assert_eq!(cpu.state.P, CpuFlags::none() | N_FLAG);
+}
+
+#[test]
+fn cpu_instr_exec_dec_test() {
+    let mut cpu;
+    let mut x;
+
+    cpu = cpu!();
+    x = cpu.instr_exec(isa::DEC, 0xFF);
+    assert_eq!(x, 0xFE);
+    assert_eq!(cpu.state.P, CpuFlags::none() | N_FLAG);
+
+    cpu = cpu!();
+    x = cpu.instr_exec(isa::DEC, 0x01);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.P, CpuFlags::none() | Z_FLAG);
+
+    cpu = cpu!();
+    x = cpu.instr_exec(isa::DEC, 0x80);
+    assert_eq!(x, 0x7F);
+    assert_eq!(cpu.state.P, CpuFlags::none());
+}
+
+#[test]
+fn cpu_instr_exec_dex_test() {
+    let mut cpu;
+    let mut x;
+
+    cpu = cpu!();
+    cpu.state.X = 0xFF;
+    x = cpu.instr_exec(isa::DEX, 0x00);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.X, 0xFE);
+    assert_eq!(cpu.state.P, CpuFlags::none() | N_FLAG);
+
+    cpu = cpu!();
+    cpu.state.X = 0x01;
+    x = cpu.instr_exec(isa::DEX, 0x00);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.X, 0x00);
+    assert_eq!(cpu.state.P, CpuFlags::none() | Z_FLAG);
+
+    cpu = cpu!();
+    cpu.state.X = 0x80;
+    x = cpu.instr_exec(isa::DEX, 0x00);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.X, 0x7F);
+    assert_eq!(cpu.state.P, CpuFlags::none());
+}
+
+fn cpu_instr_exec_asl_test() {
+    let mut cpu;
+    let mut x;
+
+    cpu = cpu!();
+    x = cpu.instr_exec(isa::ASL, 0x00);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.P, CpuFlags::none() | Z_FLAG);
+
+    cpu = cpu!();
+    x = cpu.instr_exec(isa::ASL, 0x80);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.P, CpuFlags::none() | C_FLAG | Z_FLAG);
+
+    cpu = cpu!();
+    x = cpu.instr_exec(isa::ASL, 0xFF);
+    assert_eq!(x, 0xFE);
+    assert_eq!(cpu.state.P, CpuFlags::none() | C_FLAG | N_FLAG);
+
+    cpu = cpu!();
+    x = cpu.instr_exec(isa::ASL, 0x01);
+    assert_eq!(x, 0x02);
+    assert_eq!(cpu.state.P, CpuFlags::none());
+
+    cpu = cpu!();
+    x = cpu.instr_exec(isa::ASL, 0x55);
+    assert_eq!(x, 0xCC);
+    assert_eq!(cpu.state.P, CpuFlags::none() | N_FLAG);
+
+    cpu = cpu!();
+    x = cpu.instr_exec(isa::ASL, 0xCC);
+    assert_eq!(x, 0x58);
+    assert_eq!(cpu.state.P, CpuFlags::none());
+}
+
+fn cpu_instr_exec_lsr_test() {
+    let mut cpu;
+    let mut x;
+
+    cpu = cpu!();
+    x = cpu.instr_exec(isa::LSR, 0x00);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.P, CpuFlags::none() | Z_FLAG);
+
+    cpu = cpu!();
+    x = cpu.instr_exec(isa::LSR, 0xFF);
+    assert_eq!(x, 0x7F);
+    assert_eq!(cpu.state.P, CpuFlags::none() | C_FLAG);
+
+    cpu = cpu!();
+    x = cpu.instr_exec(isa::LSR, 0x01);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.P, CpuFlags::none() | C_FLAG | Z_FLAG);
+
+    cpu = cpu!();
+    x = cpu.instr_exec(isa::LSR, 0x02);
+    assert_eq!(x, 0x01);
+    assert_eq!(cpu.state.P, CpuFlags::none());
+
+    cpu = cpu!();
+    x = cpu.instr_exec(isa::LSR, 0xCC);
+    assert_eq!(x, 0x55);
+    assert_eq!(cpu.state.P, CpuFlags::none());
+
+    cpu = cpu!();
+    x = cpu.instr_exec(isa::LSR, 0x55);
+    assert_eq!(x, 0x2A);
+    assert_eq!(cpu.state.P, CpuFlags::none() | C_FLAG);
+}
+
+fn cpu_instr_exec_rol_test() {
+    let mut cpu;
+    let mut x;
+
+    cpu = cpu!();
+    x = cpu.instr_exec(isa::ROL, 0x00);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.P, CpuFlags::none() | Z_FLAG);
+
+    cpu = cpu!();
+    x = cpu.instr_exec(isa::ROL, 0xFF);
+    assert_eq!(x, 0xFE);
+    assert_eq!(cpu.state.P, CpuFlags::none() | C_FLAG | N_FLAG);
+
+    cpu = cpu!();
+    cpu.state.P.insert(C_FLAG);
+    x = cpu.instr_exec(isa::ROL, 0xFF);
+    assert_eq!(x, 0xFF);
+    assert_eq!(cpu.state.P, CpuFlags::none() | C_FLAG | N_FLAG);
+
+    cpu = cpu!();
+    cpu.state.P.insert(C_FLAG);
+    x = cpu.instr_exec(isa::ROL, 0x7F);
+    assert_eq!(x, 0xFF);
+    assert_eq!(cpu.state.P, CpuFlags::none() |  N_FLAG);
 }
