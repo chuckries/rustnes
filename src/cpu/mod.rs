@@ -214,10 +214,92 @@ impl Cpu {
                 self.state.P.set_zn(out);
             }
             isa::ROR => {
-                out = (m >> 1) | if (self.state.P.contains(C_FLAG)) { 0x80 } else { 0x00 };
+                out = (m >> 1) | if self.state.P.contains(C_FLAG) { 0x80 } else { 0x00 };
                 self.state.P.remove(C_FLAG);
                 if m & 0x01 > 0 { self.state.P.insert(C_FLAG); }
                 self.state.P.set_zn(out);
+            }
+
+            //Logic
+            isa::AND => {
+                self.state.A = a & m;
+                self.state.P.set_zn(self.state.A);
+            }
+            isa::ORA => {
+                self.state.A = a | m;
+                self.state.P.set_zn(self.state.A);
+            }
+            isa::EOR => {
+                self.state.A = a ^ m;
+                self.state.P.set_zn(self.state.A);
+            }
+            
+            //Compare and Test Bit
+            isa::CMP => {
+                let val: u16 = (a as u16) + (!m as u16) + 0x01;
+                self.state.P.set_c(val);
+                let val: u8 = val as u8;
+                self.state.P.set_zn(val);
+            }
+            isa::CPX => {
+                let val: u16 = (x as u16) + (!m as u16) + 0x01;
+                self.state.P.set_c(val);
+                let val: u8 = val as u8;
+                self.state.P.set_zn(val);
+            }
+            isa::CPY => {
+                let val: u16 = (y as u16) + (!m as u16) + 0x01;
+                self.state.P.set_c(val);
+                let val: u8 = val as u8;
+                self.state.P.set_zn(val);
+            }
+            isa::BIT => {
+                self.state.P.remove(Z_FLAG | N_FLAG | V_FLAG);
+                if (m as i8) < 0 { self.state.P.insert(N_FLAG); }
+                if (m & 0x40) > 0 { self.state.P.insert(V_FLAG); }
+                if a & m == 0 { self.state.P.insert(Z_FLAG); }
+            }
+
+            //Branch
+            isa::BCC => {
+                if self.state.P.contains(C_FLAG) == false {
+                    self.add_pc_rel(m);
+                }
+            }
+            isa::BCS => {
+                if self.state.P.contains(C_FLAG) {
+                    self.add_pc_rel(m);
+                }
+            }
+            isa::BEQ => {
+                if self.state.P.contains(Z_FLAG) {
+                    self.add_pc_rel(m);
+                }
+            }
+            isa::BMI => {
+                if self.state.P.contains(N_FLAG) {
+                    self.add_pc_rel(m);
+                }
+            }
+            isa::BNE => {
+                if self.state.P.contains(Z_FLAG) == false {
+                    self.add_pc_rel(m);
+                }
+            }
+            isa::BPL => {
+                if self.state.P.contains(N_FLAG) == false {
+                    self.add_pc_rel(m);
+                }
+            }
+            isa::BVC => {
+                if self.state.P.contains(V_FLAG) == false {
+                    self.add_pc_rel(m);
+                }
+            }
+            isa::BVS => {
+                if self.state.P.contains(V_FLAG) {
+                    self.add_pc_rel(m);
+                }
             }
             _ => { error!("Unimplemented instruction"); }
         }
@@ -320,6 +402,10 @@ impl Cpu {
 
         let word: VAddr = (hi as VAddr) << 8 | (lo as VAddr);
         word
+    }
+
+    fn add_pc_rel(&mut self, offset: u8) {
+        self.state.PC = (self.state.PC as i16 + ((offset as i8)) as i16) as u16;
     }
 
     /// Read 2 bytes from the memory bus as an VAddr
