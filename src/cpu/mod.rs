@@ -482,8 +482,8 @@ impl Cpu {
     }
 
     fn pop(&mut self) -> u8 {
-        let addr: uint = 0x0100 | (self.state.S as uint);
         self.state.S += 1;
+        let addr: uint = 0x0100 | (self.state.S as uint);
         self.ram[addr]
     } 
 
