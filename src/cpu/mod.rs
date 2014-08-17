@@ -90,7 +90,7 @@ struct CpuState {
     pub A:  u8,     //Accumulator
     pub X:  u8,     //Index Register X
     pub Y:  u8,     //Index Register Y
-    pub SP: u8,     //Stack Pointer
+    pub S:  u8,     //Stack Pointer
     pub P:  CpuFlags,     //Status Register
 }
 
@@ -101,7 +101,7 @@ impl CpuState {
             A:  0x00,
             X:  0x00,
             Y:  0x00,
-            SP: 0x00,
+            S:  0xFF,
             P:  CpuFlags::none(),
         }
     }
@@ -159,6 +159,8 @@ impl Cpu {
         let a: u8 = self.state.A;
         let x: u8 = self.state.X;
         let y: u8 = self.state.Y;
+        let s: u8 = self.state.S;
+        let p: CpuFlags = self.state.P;
         let m: u8 = from_mem;
         let mut out: u8 = 0;
         match instr {
@@ -172,7 +174,7 @@ impl Cpu {
 
             //Airthmetic
             isa::ADC => { 
-                let val: u16 = (a as u16) + (m as u16) + ((self.state.P & C_FLAG).bits as u16);
+                let val: u16 = (a as u16) + (m as u16) + ((p & C_FLAG).bits as u16);
                 self.state.P.set_c(val);
                 let val: u8 = val as u8;
                 self.state.P.set_v(a, m, val);
@@ -180,7 +182,7 @@ impl Cpu {
                 self.state.A = val;
             }
             isa::SBC => {
-                let val: u16 = (a as u16) + (!m as u16) + ((self.state.P & C_FLAG).bits as u16); //yup, subtraction looks weird. see SBC at http://users.telenet.be/kim1-6502/6502/proman.html#222
+                let val: u16 = (a as u16) + (!m as u16) + ((p & C_FLAG).bits as u16); //yup, subtraction looks weird. see SBC at http://users.telenet.be/kim1-6502/6502/proman.html#222
                 self.state.P.set_c(val);
                 let val: u8 = val as u8;
                 self.state.P.set_v(val, m, a);
@@ -209,12 +211,12 @@ impl Cpu {
                 self.state.P.set_zn(out);
             }
             isa::ROL => {
-                out = (m << 1) | (self.state.P.bits & C_FLAG.bits);
+                out = (m << 1) | (p.bits & C_FLAG.bits);
                 self.state.P.set_c((m as u16) << 1);
                 self.state.P.set_zn(out);
             }
             isa::ROR => {
-                out = (m >> 1) | if self.state.P.contains(C_FLAG) { 0x80 } else { 0x00 };
+                out = (m >> 1) | if p.contains(C_FLAG) { 0x80 } else { 0x00 };
                 self.state.P.remove(C_FLAG);
                 if m & 0x01 > 0 { self.state.P.insert(C_FLAG); }
                 self.state.P.set_zn(out);
@@ -262,45 +264,105 @@ impl Cpu {
 
             //Branch
             isa::BCC => {
-                if self.state.P.contains(C_FLAG) == false {
+                if p.contains(C_FLAG) == false {
                     self.add_pc_rel(m);
                 }
             }
             isa::BCS => {
-                if self.state.P.contains(C_FLAG) {
+                if p.contains(C_FLAG) {
                     self.add_pc_rel(m);
                 }
             }
             isa::BEQ => {
-                if self.state.P.contains(Z_FLAG) {
+                if p.contains(Z_FLAG) {
                     self.add_pc_rel(m);
                 }
             }
             isa::BMI => {
-                if self.state.P.contains(N_FLAG) {
+                if p.contains(N_FLAG) {
                     self.add_pc_rel(m);
                 }
             }
             isa::BNE => {
-                if self.state.P.contains(Z_FLAG) == false {
+                if p.contains(Z_FLAG) == false {
                     self.add_pc_rel(m);
                 }
             }
             isa::BPL => {
-                if self.state.P.contains(N_FLAG) == false {
+                if p.contains(N_FLAG) == false {
                     self.add_pc_rel(m);
                 }
             }
             isa::BVC => {
-                if self.state.P.contains(V_FLAG) == false {
+                if p.contains(V_FLAG) == false {
                     self.add_pc_rel(m);
                 }
             }
             isa::BVS => {
-                if self.state.P.contains(V_FLAG) {
+                if p.contains(V_FLAG) {
                     self.add_pc_rel(m);
                 }
             }
+
+            //Transfer
+            isa::TAX => { self.state.X = a; self.state.P.set_zn(a); }
+            isa::TXA => { self.state.A = x; self.state.P.set_zn(x); }
+            isa::TAY => { self.state.Y = a; self.state.P.set_zn(a); }
+            isa::TYA => { self.state.A = y; self.state.P.set_zn(y); }
+            isa::TSX => { self.state.X = s; self.state.P.set_zn(s); }
+            isa::TXS => { self.state.S = x; self.state.P.set_zn(x); }
+
+            //Stack
+            isa::PHA => { self.push(a); }
+            isa::PLA => { self.state.A = self.pop(); self.state.P.set_zn(self.state.A); }
+            isa::PHP => { self.push(p.bits); }
+            isa::PLP => { self.state.P.bits = self.pop(); }
+
+            //Subroutines and Jump
+            isa::JMP => {
+                //Dammit, this is a snag in my design. At this point I don't have the memory
+                //address from the instruction, only the data stored at that location, which is
+                //meaningless for a jump. Rewind the pc and do the mem reference again.
+                //I also don't have the addressing mode, so just re-decode the whole instruction.
+                //TODO Fix this garbage
+                self.state.PC -= 3;
+                let inner_instr = self.instr_decode();
+                self.state.PC = self.instr_mem_addr(inner_instr.address_mode);
+            }
+            isa::JSR => {
+                //same issue as JMP
+                let pc = self.state.PC - 1;
+                self.push_addr(pc);
+                self.state.PC -= 2;
+                self.state.PC = self.instr_mem_addr(isa::ABS);
+            }
+            isa::RTS => {
+                self.state.PC = self.pop_addr() + 1;
+            }
+            isa::RTI => {
+                self.state.P.bits = self.pop();
+                self.state.PC = self.pop_addr();
+            }
+
+            //Set and Clear
+            isa::SEC => { self.state.P.insert(C_FLAG); }
+            isa::SED => { self.state.P.insert(D_FLAG); }
+            isa::SEI => { self.state.P.insert(I_FLAG); }
+            isa::CLC => { self.state.P.remove(C_FLAG); }
+            isa::CLD => { } //no effect on NES
+            isa::CLI => { self.state.P.remove(I_FLAG); }
+            isa::CLV => { self.state.P.remove(V_FLAG); }
+
+            //Miscellaneous
+            isa::NOP => { }
+            isa::BRK => {
+                let pc = self.state.PC + 1;
+                self.push_addr(pc);
+                self.push(p.bits | B_FLAG.bits);
+                self.state.P.insert(I_FLAG);
+                self.state.PC = self.read_addr(0xFFFE);
+            }
+
             _ => { error!("Unimplemented instruction"); }
         }
 
@@ -316,6 +378,7 @@ impl Cpu {
             addr as u8
         } else {
             match instr.instr {
+                //TODO remove jumps
                 isa::ADC | isa::AND | isa::ASL | isa::BIT |
                 isa::CMP | isa::CPX | isa::CPY | isa::DEC |
                 isa::EOR | isa::INC | isa::JMP | isa::JSR |
@@ -359,16 +422,16 @@ impl Cpu {
                 (self.read_pc_byte() + self.state.Y) as VAddr
             }
             isa::ABS => { 
-                self.read_pc_word()
+                self.read_pc_addr()
             }
             isa::ABSX => { 
-                self.read_pc_word() + (self.state.X as VAddr)
+                self.read_pc_addr() + (self.state.X as VAddr)
             }
             isa::ABSY => { 
-                self.read_pc_word() + (self.state.Y as VAddr)
+                self.read_pc_addr() + (self.state.Y as VAddr)
             }
             isa::IND => {
-                let indirect_address: VAddr = self.read_pc_word();
+                let indirect_address: VAddr = self.read_pc_addr();
                 self.read_addr(indirect_address)
             }
             isa::IMP | isa::ACC => { //implied and accumulator instr's have no memory reference
@@ -396,7 +459,7 @@ impl Cpu {
 
     //this function will read the next two bytes at PC and increment it by 2
     //if (PC) is 0xAA and (PC + 1) is 0xBB, the output of this will be 0xBBAA
-    fn read_pc_word(&mut self) -> VAddr {
+    fn read_pc_addr(&mut self) -> VAddr {
         let lo: u8 = self.read_pc_byte();
         let hi: u8 = self.read_pc_byte();
 
@@ -406,6 +469,31 @@ impl Cpu {
 
     fn add_pc_rel(&mut self, offset: u8) {
         self.state.PC = (self.state.PC as i16 + ((offset as i8)) as i16) as u16;
+    }
+
+    fn push(&mut self, val: u8) {
+        let addr: uint = 0x0100 | (self.state.S as uint);
+        self.ram[addr] = val;
+        self.state.S -= 1;
+    }
+
+    fn push_addr(&mut self, addr: VAddr) {
+        self.push(((addr >> 8) & 0xFF) as u8);
+        self.push((addr & 0xFF) as u8);
+    }
+
+    fn pop(&mut self) -> u8 {
+        let addr: uint = 0x0100 | (self.state.S as uint);
+        self.state.S += 1;
+        self.ram[addr]
+    } 
+
+    fn pop_addr(&mut self) -> VAddr {
+        let lo = self.pop();
+        let hi = self.pop();
+
+        let word: VAddr = (hi as VAddr) << 8 | (lo as VAddr);
+        word
     }
 
     /// Read 2 bytes from the memory bus as an VAddr
