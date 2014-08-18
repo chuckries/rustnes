@@ -1966,3 +1966,190 @@ fn cpu_instr_exec_plp_test() {
     assert_eq!(cpu.state.P.bits, 0x01);
     assert_eq!(cpu.state.S, 0xFF);
 }
+
+/// ## Set and Clear
+/// 
+///
+#[test]
+fn cpu_instr_exec_jmp_test() {
+    let mut prg_rom_bank = prg_rom_bank!(0xC5);
+    prg_rom_bank[0x0000] = 0x4C;
+    prg_rom_bank[0x0001] = 0xAA;
+    prg_rom_bank[0x0002] = 0xBB;
+
+    let mut cpu = cpu!(prg_rom!(prg_rom_bank, prg_rom_bank!()));
+    cpu.state.PC = 0x8000;
+    cpu.instr_run();
+    assert_eq!(cpu.state.PC, 0xBBAA);
+
+    let mut prg_rom_bank_0 = prg_rom_bank!(0xC5);
+    prg_rom_bank_0[0x0000] = 0x6C;
+    prg_rom_bank_0[0x0001] = 0x01;
+    prg_rom_bank_0[0x0002] = 0xC0;
+
+    let mut prg_rom_bank_1 = prg_rom_bank!(0xC5);
+    prg_rom_bank_1[0x0001] = 0xAA;
+    prg_rom_bank_1[0x0002] = 0xBB;
+
+    let mut cpu = cpu!(prg_rom!(prg_rom_bank_0, prg_rom_bank_1));
+    cpu.state.PC = 0x8000;
+    cpu.instr_run();
+    assert_eq!(cpu.state.PC, 0xBBAA);
+}
+
+#[test]
+fn cpu_instr_exec_jsr_test() {
+    let mut prg_rom_bank = prg_rom_bank!(0xC5);
+    prg_rom_bank[0x0000] = 0x20;
+    prg_rom_bank[0x0001] = 0xAA;
+    prg_rom_bank[0x0002] = 0xBB;
+
+    let mut cpu = cpu!(prg_rom!(prg_rom_bank, prg_rom_bank!()));
+    cpu.state.PC = 0x8000;
+    cpu.instr_run();
+    assert_eq!(cpu.state.PC, 0xBBAA);
+    assert_eq!(cpu.ram[0x01FF], 0x80);
+    assert_eq!(cpu.ram[0x01FE], 0x02);
+}
+
+#[test]
+fn cpu_instr_exec_rts_test() {
+    let mut cpu;
+    let mut x;
+
+    cpu = cpu!();
+    cpu.ram[0x01FF] = 0xAA;
+    cpu.ram[0x01FE] = 0xBB;
+    cpu.state.S = 0xFD;
+    x = cpu.instr_exec(isa::RTS, 0x00);
+    assert_eq!(cpu.state.PC, 0xAABC);
+    assert_eq!(cpu.state.S, 0xFF);
+}
+
+#[test]
+fn cpu_instr_exec_rti_test() {
+    let mut cpu;
+    let mut x;
+
+    cpu = cpu!();
+    cpu.ram[0x01FF] = 0xAA;
+    cpu.ram[0x01FE] = 0xBB;
+    cpu.ram[0x01FD] = 0xCC;
+    cpu.state.S = 0xFC;
+    x = cpu.instr_exec(isa::RTI, 0x00);
+    assert_eq!(cpu.state.P.bits, 0xCC);
+    assert_eq!(cpu.state.PC, 0xAABB);
+    assert_eq!(cpu.state.S, 0xFF);
+}
+
+/// ## Set and Clear
+///
+///
+#[test]
+fn cpu_instr_exec_sec_test() {
+    let mut cpu;
+    let mut x;
+
+    cpu = cpu!();
+    x = cpu.instr_exec(isa::SEC, 0x00);
+    assert_eq!(cpu.state.P, CpuFlags::none() | C_FLAG);
+}
+
+#[test]
+fn cpu_instr_exec_sed_test() {
+    let mut cpu;
+    let mut x;
+
+    cpu = cpu!();
+    x = cpu.instr_exec(isa::SED, 0x00);
+    assert_eq!(cpu.state.P, CpuFlags::none());
+}
+
+#[test]
+fn cpu_instr_exec_sei_test() {
+    let mut cpu;
+    let mut x;
+
+    cpu = cpu!();
+    x = cpu.instr_exec(isa::SEI, 0x00);
+    assert_eq!(cpu.state.P, CpuFlags::none() | I_FLAG);
+}
+
+#[test]
+fn cpu_instr_exec_clc_test() {
+    let mut cpu;
+    let mut x;
+
+    cpu = cpu!();
+    cpu.state.P.insert(C_FLAG);
+    assert_eq!(cpu.state.P, CpuFlags::none() | C_FLAG);
+    x = cpu.instr_exec(isa::CLC, 0x00);
+    assert_eq!(cpu.state.P, CpuFlags::none());
+}
+
+#[test]
+fn cpu_instr_exec_cld_test() {
+    let mut cpu;
+    let mut x;
+
+    cpu = cpu!();
+    x = cpu.instr_exec(isa::CLD, 0x00);
+    assert_eq!(cpu.state.P, CpuFlags::none());
+}
+
+#[test]
+fn cpu_instr_exec_cli_test() {
+    let mut cpu;
+    let mut x;
+
+    cpu = cpu!();
+    cpu.state.P.insert(I_FLAG);
+    assert_eq!(cpu.state.P, CpuFlags::none() | I_FLAG);
+    x = cpu.instr_exec(isa::CLI, 0x00);
+    assert_eq!(cpu.state.P, CpuFlags::none());
+}
+
+#[test]
+fn cpu_instr_exec_clv_test() {
+    let mut cpu;
+    let mut x;
+
+    cpu = cpu!();
+    cpu.state.P.insert(V_FLAG);
+    assert_eq!(cpu.state.P, CpuFlags::none() | V_FLAG);
+    x = cpu.instr_exec(isa::CLV, 0x00);
+    assert_eq!(cpu.state.P, CpuFlags::none());
+}
+
+/// ## Miscellaneous
+///
+///
+#[test]
+fn cpu_instr_exec_nop_test() {
+    let mut cpu;
+    let mut x;
+
+    cpu = cpu!();
+    x = cpu.instr_exec(isa::NOP, 0x00);
+    assert_eq!(x, 0x00);
+    assert_eq!(cpu.state.P, CpuFlags::none());
+}
+
+#[test]
+fn cpu_instr_exec_brk_test() {
+    let mut cpu;
+    let mut x;
+
+    let mut prg_rom_bank = prg_rom_bank!(0xC5);
+    prg_rom_bank[0x3FFE] = 0xAA;
+    prg_rom_bank[0x3FFF] = 0xBB;
+
+    cpu = cpu!(prg_rom!(prg_rom_bank!(0xC5), prg_rom_bank));
+    cpu.state.PC = 0x8000;
+    x = cpu.instr_exec(isa::BRK, 0x00);
+    assert_eq!(cpu.ram[0x01FF], 0x80);
+    assert_eq!(cpu.ram[0x01FE], 0x01);
+    assert_eq!(cpu.ram[0x01FD], (CpuFlags::none() | B_FLAG).bits);
+    assert_eq!(cpu.state.P, CpuFlags::none() | I_FLAG);
+    assert_eq!(cpu.state.PC, 0xBBAA);
+}

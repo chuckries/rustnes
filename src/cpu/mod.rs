@@ -138,14 +138,22 @@ impl Cpu {
         //get the memory address referenced by this instr
         let m_addr = self.instr_mem_addr(instr.address_mode);
 
-        //get the value referenced by the memory addr
-        let m = self.instr_mem_read(m_addr, instr);
+        if instr.instr == isa::JMP {
+            self.state.PC = m_addr;
+        } else if instr.instr == isa::JSR {
+            let pc = self.state.PC - 1;
+            self.push_addr(pc);
+            self.state.PC = m_addr;
+        } else {
+            //get the value referenced by the memory addr
+            let m = self.instr_mem_read(m_addr, instr);
 
-        //perform the action of the operation
-        let x = self.instr_exec(instr.instr, m);
-        
-        //write back to ram
-        self.instr_mem_write(m_addr, x, instr);
+            //perform the action of the operation
+            let x = self.instr_exec(instr.instr, m);
+            
+            //write back to ram
+            self.instr_mem_write(m_addr, x, instr);
+        }
 
         0
     }
@@ -319,23 +327,7 @@ impl Cpu {
             isa::PLP => { self.state.P.bits = self.pop(); }
 
             //Subroutines and Jump
-            isa::JMP => {
-                //Dammit, this is a snag in my design. At this point I don't have the memory
-                //address from the instruction, only the data stored at that location, which is
-                //meaningless for a jump. Rewind the pc and do the mem reference again.
-                //I also don't have the addressing mode, so just re-decode the whole instruction.
-                //TODO Fix this garbage
-                self.state.PC -= 3;
-                let inner_instr = self.instr_decode();
-                self.state.PC = self.instr_mem_addr(inner_instr.address_mode);
-            }
-            isa::JSR => {
-                //same issue as JMP
-                let pc = self.state.PC - 1;
-                self.push_addr(pc);
-                self.state.PC -= 2;
-                self.state.PC = self.instr_mem_addr(isa::ABS);
-            }
+            //Note: JMP and JSR are implemented in instr_run because they need access to m_addr
             isa::RTS => {
                 self.state.PC = self.pop_addr() + 1;
             }
@@ -495,7 +487,6 @@ impl Cpu {
         word
     }
 
-    /// Read 2 bytes from the memory bus as an VAddr
     pub fn read_addr(&self, virtual_address: VAddr) -> VAddr {
         let lo: u8 = self.read_byte(virtual_address);
         let hi: u8 = self.read_byte(virtual_address + 1);
