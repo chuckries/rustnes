@@ -3,4 +3,3 @@
 name = "rustnes"
 version = "0.0.1"
 authors = [ "Chuck Ries chuck.ries@gmail.com" ]
-build = "make"
