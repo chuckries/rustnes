@@ -497,7 +497,7 @@ impl Cpu {
 
 /// # Memory Map
 /// This is from http://nesdev.com/NESDoc.pdf
-///  _______________         _______________
+///  _______________ $10000  _______________
 /// | PRG-ROM       |       |               |
 /// | Upper Bank    |       |               |
 /// |_ _ _ _ _ _ _ _| $C000 | PRG-ROM       |
