@@ -1,3 +1,5 @@
+use std::mem;
+
 /// # Memory Map
 /// This is from http://nesdev.com/NESDoc.pdf
 ///  ___________________ $10000  ________________
@@ -112,3 +114,72 @@
 ///
 /// TODO
 /// DMA Register ($4014) and Joypad I/O Registers ($4016 and $4017)
+///
+
+
+
+
+
+/// # Sprites
+///
+/// This is from http://nesdev.com/NESDoc.pdf but
+/// better doc can be found at http://wiki.nesdev.com/w/index.php/PPU_OAM
+///
+/// - Byte 0 - Stores the Y coordinate of the top of the sprite minus 1
+/// - Byte 1 - Index number of the sprite in the patter tables
+/// - Byte 2 - Stores the attributes of the sprites
+/// -- Bits 1-0 - Most signifigant bits of the color
+/// -- Bit 5    - Indicates whether this sprite has priority over the background
+/// -- Bit 6    - Indicates whether to flip the sprite horizontally
+/// -- Bit 7    - Indicates whether to flip the sprite vetically
+/// - Byte 3 - Stores the X coordinate of the left of the sprite
+/// -- X-scroll values of F9-FF do NOT result in the sprite wrapping 
+///    around to the left side of the screen.
+
+bitflags!(
+    flags SprAttr: u8 {
+        static COLOR_MASK    = 0b00000011,
+        static PRIORITY_FLAG = 0b00100000,
+        static H_FLIP        = 0b01000000,
+        static V_FLIP        = 0b10000000
+    }
+)
+
+struct Spr {
+    Y: u8,
+    I: u8,
+    attr: SprAttr,
+    X: u8,
+}
+
+impl Spr {
+    //make a Spr out of 4 bytes
+    #[inline]
+    pub fn new(bytes: [u8, ..4]) -> Spr {
+        let spr: &Spr;
+        unsafe { spr = mem::transmute(bytes.as_ptr()) }
+        *spr
+    }
+
+    #[inline]
+    //returns the correctly alligned color bits for a pallete lookup
+    //i.e. if attr = 0b00000011 then this returns 0b00001100
+    pub fn color(&self) -> u8 {
+        (self.attr & COLOR_MASK).bits << 2
+    }
+
+    #[inline]
+    pub fn has_priority(&self) -> bool {
+        self.attr.contains(PRIORITY_FLAG)
+    }
+
+    #[inline]
+    pub fn h_flip(&self) -> bool {
+        self.attr.contains(H_FLIP)
+    }
+
+    #[inline]
+    pub fn v_flip(&self) -> bool {
+        self.attr.contains(V_FLIP)
+    }
+}

@@ -7,6 +7,7 @@ pub use nes::{Nes};
 
 mod nes;
 mod cpu;
+mod ppu;
 
 #[cfg(test)]
 mod test {
