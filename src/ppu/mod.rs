@@ -1,5 +1,8 @@
 use std::mem;
 
+#[cfg(test)]
+pub mod test;
+
 /// # Memory Map
 /// This is from http://nesdev.com/NESDoc.pdf
 ///  ___________________ $10000  ________________
@@ -157,13 +160,13 @@ impl Spr {
     #[inline]
     pub fn new(bytes: [u8, ..4]) -> Spr {
         let spr: &Spr;
-        unsafe { spr = mem::transmute(bytes.as_ptr()) }
+        unsafe { spr = mem::transmute(bytes.as_ptr()); }
         *spr
     }
 
-    #[inline]
     //returns the correctly alligned color bits for a pallete lookup
     //i.e. if attr = 0b00000011 then this returns 0b00001100
+    #[inline]
     pub fn color(&self) -> u8 {
         (self.attr & COLOR_MASK).bits << 2
     }
@@ -181,5 +184,15 @@ impl Spr {
     #[inline]
     pub fn v_flip(&self) -> bool {
         self.attr.contains(V_FLIP)
+    }
+}
+
+struct SprRam([Spr, ..64]);
+
+impl SprRam {
+    pub fn new(bytes: [u8, ..256]) -> SprRam {
+        let spr_ram: &SprRam;
+        unsafe { spr_ram = mem::transmute(bytes.as_ptr()); }
+        *spr_ram
     }
 }
