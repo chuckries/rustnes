@@ -180,7 +180,7 @@ impl Cpu {
             isa::STX => { out = self.state.X; }
             isa::STY => { out = self.state.Y; }
 
-            //Airthmetic
+            //Arithmetic
             isa::ADC => { 
                 let val: u16 = (a as u16) + (m as u16) + ((p & C_FLAG).bits as u16);
                 self.state.P.set_c(val);

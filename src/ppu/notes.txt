@@ -1,0 +1,31 @@
+try doing VRAM and SprRam as flat buffers implemented with slices on top of them
+SprRam for example:
+
+struct SprRam {
+	buffer: [u8, ..256], //256 bytes in spr-ram, all I need to actually hold onto
+}
+
+impl SprRam {
+	//indexing SprRam like spr_ram[0xAA] will return the SprRam buffer data	
+	//at that address
+
+	//indexing by sprite number will return a Spr
+	pub fn spr(idx: uint) -> Spr;
+}
+
+struct Spr {
+	spr: &[u8, ..4], // a slice of size 4 into a byte array
+}
+
+impl Spr {
+	pub fn Y(&self) -> u8 { self[0] }
+	pub fn index(&self) -> u8 { self[1] }
+	pub fn attr(&self) -> SprAttr { SprAttr::from_bits(self[2]) }
+	pub fn X(&self) -> u8 { self[3] }
+}
+
+
+Now I can change SprRam data byte by byte using addresses, but 
+I can also index for Spr's 
+
+Boom. Rust. Or maybe any language. Idk. 

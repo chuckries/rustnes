@@ -44,9 +44,6 @@ impl Nes {
 
         let cpu = Cpu::new(prg_rom);
 
-        //hand back a Nes struct. At this point it only has ownership of the Cpu.
-        //I'm still fairly unsure how this will look down the road
-        //I will likely hide the PPU behind mem, but I will also want access to it here
         Nes { 
             rom_path: rom_path,
 
