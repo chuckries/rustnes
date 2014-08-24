@@ -1,7 +1,7 @@
 #[macro_escape]
 
-use nes::{PrgRom};
-use nes::test::*;
+use nes::{PrgRom, PRG_ROM_BANK_SIZE};
+use nes::test;
 
 use cpu::{Cpu, CpuState, CpuFlags, Ram, RAM_SIZE};
 use cpu::{C_FLAG, Z_FLAG, I_FLAG, D_FLAG, B_FLAG, X_FLAG, V_FLAG, N_FLAG};
@@ -32,8 +32,9 @@ macro_rules! ram(
 )
 
 /// # Macro Helpers
-/// 
+///     
 ///
+
 fn get_empty_cpu_state() -> CpuState {
     CpuState::new()
 }
@@ -48,7 +49,7 @@ fn get_initialized_ram(init: u8) -> Ram {
 
 fn get_empty_cpu() -> Cpu {
     let state = get_empty_cpu_state();
-    let prg_rom = get_empty_prg_rom();
+    let prg_rom = prg_rom!();
     let ram = [0u8, ..RAM_SIZE];
 
     Cpu {
@@ -82,6 +83,7 @@ fn get_cpu_with_prg_rom_and_ram(prg_rom: PrgRom, ram: Ram) -> Cpu {
 /// # Sanity Test
 ///
 ///
+
 #[test]
 fn cpu_sanity_test() {
     let mut prg_rom_bank = prg_rom_bank!(0xC5);

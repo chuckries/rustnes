@@ -8,7 +8,7 @@ use cpu::Cpu;
 #[cfg(test)]
 pub mod test;
 
-static PRG_ROM_BANK_SIZE: uint = 0x4000; //16 KB
+pub static PRG_ROM_BANK_SIZE: uint = 0x4000; //16 KB
 type PrgRomBank = [u8, ..PRG_ROM_BANK_SIZE];
 pub type PrgRom = Vec<PrgRomBank>;
 

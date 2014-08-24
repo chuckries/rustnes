@@ -29,7 +29,8 @@ macro_rules! rom_header(
 
 macro_rules! prg_rom(
     () => ( //used as 'prg_rom!()' to get a vec of two empty prg_rom banks
-        get_empty_prg_rom()
+        //get_empty_prg_rom()
+        Vec::from_fn(2, |_| prg_rom_bank!())
     );
     ($($e:expr),*) => ({
         let mut _temp = Vec::new();
@@ -41,10 +42,12 @@ macro_rules! prg_rom(
 
 macro_rules! prg_rom_bank(
     () => ( //used as 'prg_rom_bank!()' to get an empty static array of size PRG_ROM_BANK_SIZE
-        get_empty_prg_rom_bank()
+        //get_empty_prg_rom_bank()
+        [0u8, ..PRG_ROM_BANK_SIZE]
     );
     ($init:expr) => ( //used as 'prg_rom_bank!(0xAA)' to get a static array of size PRG_ROM_BANK_SIZE with every entry initalized to 0xAA
-        get_initialized_prg_rom_bank($init)
+        //get_initialized_prg_rom_bank($init)
+        [$init, ..PRG_ROM_BANK_SIZE]
     );
 )
 
@@ -60,18 +63,6 @@ pub fn get_empty_rom_header() -> RomHeader {
         flags_10:       0u8,
         zeros:          [0u8, ..5],
     }
-}
-
-pub fn get_empty_prg_rom_bank() -> PrgRomBank {
-    [0u8, ..PRG_ROM_BANK_SIZE]
-}
-
-pub fn get_initialized_prg_rom_bank(init: u8) -> PrgRomBank {
-    [init, ..PRG_ROM_BANK_SIZE]
-}
-
-pub fn get_empty_prg_rom() -> PrgRom {
-    Vec::from_fn(2, |_| prg_rom_bank!())
 }
 
 #[test]
