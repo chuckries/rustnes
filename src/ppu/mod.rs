@@ -141,103 +141,170 @@ pub mod test;
 /// -- X-scroll values of F9-FF do NOT result in the sprite wrapping 
 ///    around to the left side of the screen.
 
-bitflags!(
-    flags SprAttr: u8 {
-        static COLOR_MASK    = 0b00000011,
-        static PRIORITY_FLAG = 0b00100000,
-        static H_FLIP        = 0b01000000,
-        static V_FLIP        = 0b10000000
-    }
-)
+static SPR_RAM_SIZE: uint = 256;
 
-struct Spr {
-    Y: u8,
-    I: u8,
-    attr: SprAttr,
-    X: u8,
+struct SprRam {
+    buf: [u8, ..SPR_RAM_SIZE],
 }
 
-impl Spr {
-    //make a Spr out of 4 bytes
+impl Index<u8, u8> for SprRam {
     #[inline]
-    pub fn new(bytes: [u8, ..4]) -> Spr {
-        let spr: &Spr;
-        unsafe { spr = mem::transmute(bytes.as_ptr()); }
-        *spr
+    fn index<'a>(&'a self, index: &u8) -> &'a u8 {
+        &self.buf[*index as uint]
+    }
+}
+
+impl SprRam {
+    pub fn new(bytes: [u8, ..SPR_RAM_SIZE]) -> SprRam {
+        SprRam {
+            buf: bytes,
+        }
     }
 
-    //returns the correctly alligned color bits for a pallete lookup
-    //i.e. if attr = 0b00000011 then this returns 0b00001100
+    #[inline]
+    pub fn spr<'a>(&'a self, idx: uint) -> Spr<'a> {
+        Spr {
+            spr: self.buf.as_slice().slice_from(idx << 2),
+        }
+    }
+}
+
+static SPR_COLOR_MASK: u8    = 0b00000011;
+static SPR_PRIORITY_FLAG: u8 = 0b00100000;
+static SPR_H_FLIP: u8        = 0b01000000;
+static SPR_V_FLIP: u8        = 0b10000000;
+
+struct Spr<'a> {
+    spr: &'a[u8],
+}
+
+impl<'a> Spr<'a> {
+    #[inline]
+    pub fn y(&self) -> u8 {
+        self.spr[0]
+    }
+
+    #[inline]
+    pub fn x(&self) -> u8 {
+        self.spr[3]
+    }
+
+    #[inline]
+    pub fn idx(&self) -> u8 {
+        self.spr[1]
+    }
+
     #[inline]
     pub fn color(&self) -> u8 {
-        (self.attr & COLOR_MASK).bits << 2
+        (self.spr[2] & SPR_COLOR_MASK) << 2
     }
 
     #[inline]
     pub fn has_priority(&self) -> bool {
-        self.attr.contains(PRIORITY_FLAG)
+        (self.spr[2] & SPR_PRIORITY_FLAG) > 0
     }
 
-    #[inline]
+    //TODO I might night actually need access to the flip attributes outside of Spr if I return
+    //iterators over they bytes that I actually want to draw. I could do all the v_flip/h_flip
+    //internally
     pub fn h_flip(&self) -> bool {
-        self.attr.contains(H_FLIP)
+        (self.spr[2] & SPR_H_FLIP) > 0
     }
 
-    #[inline]
     pub fn v_flip(&self) -> bool {
-        self.attr.contains(V_FLIP)
-    }
-
-    //spr_size is either 8 or 16
-    #[inline]
-    pub fn on_line(&self, line: uint, spr_size: uint) -> bool {
-        (self.Y as uint) >= line && (self.Y as uint + spr_size) <= line
+        (self.spr[2] & SPR_V_FLIP) > 0
     }
 }
 
-struct SprRam([Spr, ..64]);
+//struct Spr {
+//    Y: u8,
+//    I: u8,
+//    attr: SprAttr,
+//    X: u8,
+//}
+//
+//impl Spr {
+//    //make a Spr out of 4 bytes
+//    #[inline]
+//    pub fn new(bytes: [u8, ..4]) -> Spr {
+//        let spr: &Spr;
+//        unsafe { spr = mem::transmute(bytes.as_ptr()); }
+//        *spr
+//    }
+//
+//    //returns the correctly alligned color bits for a pallete lookup
+//    //i.e. if attr = 0b00000011 then this returns 0b00001100
+//    #[inline]
+//    pub fn color(&self) -> u8 {
+//        (self.attr & COLOR_MASK).bits << 2
+//    }
+//
+//    #[inline]
+//    pub fn has_priority(&self) -> bool {
+//        self.attr.contains(PRIORITY_FLAG)
+//    }
+//
+//    #[inline]
+//    pub fn h_flip(&self) -> bool {
+//        self.attr.contains(H_FLIP)
+//    }
+//
+//    #[inline]
+//    pub fn v_flip(&self) -> bool {
+//        self.attr.contains(V_FLIP)
+//    }
+//
+//    //spr_size is either 8 or 16
+//    #[inline]
+//    pub fn on_line(&self, line: uint, spr_size: uint) -> bool {
+//        (self.Y as uint) >= line && (self.Y as uint + spr_size) <= line
+//    }
+//}
+//
+//struct SprRam([Spr, ..64]);
+//
+//impl SprRam {
+//    pub fn new(bytes: [u8, ..256]) -> SprRam {
+//        let spr_ram: &SprRam;
+//        unsafe { spr_ram = mem::transmute(bytes.as_ptr()); }
+//        *spr_ram
+//    }
+//}
 
-impl SprRam {
-    pub fn new(bytes: [u8, ..256]) -> SprRam {
-        let spr_ram: &SprRam;
-        unsafe { spr_ram = mem::transmute(bytes.as_ptr()); }
-        *spr_ram
-    }
-}
 
-static PATTERN_TABLE_SIZE: uint = 0x1000;
-type PatternTable = [u8, ..PATTERN_TABLE_SIZE];
-
-static PALETTE_SIZE: uint = 0x10;
-type Palette = [u8, ..PALETTE_SIZE];
-
-pub struct Ppu {
-    pattern_tables: [PatternTable, ..2],
-    spr_ram: SprRam,
-
-    img_palette: Palette,
-    spr_palette: Palette,
-}
-
-impl Ppu {
-    pub fn new(chr_rom: ChrRom) -> Ppu {
-        let pattern_tables: &[PatternTable, ..2];
-
-        unsafe { pattern_tables = mem::transmute(chr_rom[0].as_ptr()); }
-
-        Ppu {
-            pattern_tables: *pattern_tables,
-            spr_ram: SprRam([Spr::new([0u8, ..4]), ..64]),
-
-            img_palette: [0u8, ..PALETTE_SIZE],
-            spr_palette: [0u8, ..PALETTE_SIZE],
-        }
-    }
-
-    pub fn dma(&mut self, bytes: [u8, ..256]) {
-        self.spr_ram = SprRam::new(bytes);
-    }
-}
+//static PATTERN_TABLE_SIZE: uint = 0x1000;
+//type PatternTable = [u8, ..PATTERN_TABLE_SIZE];
+//
+//static PALETTE_SIZE: uint = 0x10;
+//type Palette = [u8, ..PALETTE_SIZE];
+//
+//pub struct Ppu {
+//    pattern_tables: [PatternTable, ..2],
+//    spr_ram: SprRam,
+//
+//    img_palette: Palette,
+//    spr_palette: Palette,
+//}
+//
+//impl Ppu {
+//    pub fn new(chr_rom: ChrRom) -> Ppu {
+//        let pattern_tables: &[PatternTable, ..2];
+//
+//        unsafe { pattern_tables = mem::transmute(chr_rom[0].as_ptr()); }
+//
+//        Ppu {
+//            pattern_tables: *pattern_tables,
+//            spr_ram: SprRam([Spr::new([0u8, ..4]), ..64]),
+//
+//            img_palette: [0u8, ..PALETTE_SIZE],
+//            spr_palette: [0u8, ..PALETTE_SIZE],
+//        }
+//    }
+//
+//    pub fn dma(&mut self, bytes: [u8, ..256]) {
+//        self.spr_ram = SprRam::new(bytes);
+//    }
+//}
 
 type rgb = [u8, ..3];
 static SYSTEM_PALETTE_SIZE: uint = 0x40;

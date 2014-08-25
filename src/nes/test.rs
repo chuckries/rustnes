@@ -29,7 +29,6 @@ macro_rules! rom_header(
 
 macro_rules! prg_rom(
     () => ( //used as 'prg_rom!()' to get a vec of two empty prg_rom banks
-        //get_empty_prg_rom()
         Vec::from_fn(2, |_| prg_rom_bank!())
     );
     ($($e:expr),*) => ({
