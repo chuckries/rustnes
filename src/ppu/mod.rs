@@ -1,6 +1,7 @@
 use std::mem;
 
-use nes::{ChrRom};
+use nes::{ChrRom, CHR_ROM_BANK_SIZE};
+use nes::{VAddr};
 
 #[cfg(test)]
 pub mod test;
@@ -142,22 +143,23 @@ pub mod test;
 ///    around to the left side of the screen.
 
 static SPR_RAM_SIZE: uint = 256;
+type SprRamBuf = [u8, ..SPR_RAM_SIZE];
 
 struct SprRam {
-    buf: [u8, ..SPR_RAM_SIZE],
+    buf: SprRamBuf,
 }
 
-impl Index<u8, u8> for SprRam {
+impl Index<u16, u8> for SprRam {
     #[inline]
-    fn index<'a>(&'a self, index: &u8) -> &'a u8 {
+    fn index<'a>(&'a self, index: &u16) -> &'a u8 {
         &self.buf[*index as uint]
     }
 }
 
 impl SprRam {
-    pub fn new(bytes: [u8, ..SPR_RAM_SIZE]) -> SprRam {
+    pub fn new() -> SprRam {
         SprRam {
-            buf: bytes,
+            buf: [0u8, ..SPR_RAM_SIZE],
         }
     }
 
@@ -224,13 +226,32 @@ struct VRam {
     buf: [u8, ..0x2400], //enough for the pattern tables and one name table/attribute table
 }
 
-impl Index<u8, u8> for VRam {
-    fn index<'a>(&'a self, index: &u8) -> &'a u8 {
+impl Index<u16, u8> for VRam {
+    fn index<'a>(&'a self, index: &u16) -> &'a u8 {
         &self.buf[*index as uint]
     }
 }
 
+impl IndexMut<u16, u8> for VRam {
+    fn index_mut<'a>(&'a mut self, index: &u16) -> &'a mut u8 {
+        &mut self.buf[*index as uint]
+    }
+}
+
 impl VRam {
+    pub fn new(chr_rom: ChrRom) -> VRam {
+        let mut vram_bytes = [0u8, ..0x2400];
+
+        //TODO full ChrRomBank support
+        for i in range(0u, vram_bytes.len()) {
+            vram_bytes[i] = chr_rom[0][i];
+        }
+
+        VRam {
+            buf: vram_bytes,
+        }
+    }
+
     pub fn pattern_table<'a>(&'a self, idx: uint) -> PatternTable<'a> {
         let pattern_table = 
             if idx % 2 == 0 { self.buf.as_slice().slice_to(PATTERN_TABLE_SIZE) }
@@ -279,6 +300,120 @@ impl<'a> NameTable<'a> {
 struct AttrTable<'a> {
     attr_table: &'a[u8],
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+pub struct Ppu {
+    vram: VRam,
+    spr_ram: SprRam,
+}
+
+impl Ppu {
+    pub fn new(chr_rom: ChrRom) -> Ppu {
+        let vram = VRam::new(chr_rom);
+        let spr_ram = SprRam::new();
+
+        Ppu {
+            vram: vram,
+            spr_ram: spr_ram,
+        }
+    }
+
+/// # Memory Map
+/// This is from http://nesdev.com/NESDoc.pdf
+///  ___________________ $10000  ________________
+/// | Mirrors           |       | Mirrors        |
+/// | $0000-$3FFF       |       | $0000-$3FFF    |
+/// |___________________| $4000 |________________|
+/// | Mirrors           |       |                |
+/// | $3F00-$3F1F       |       |                |
+/// |_ _ _ _ _ _ _ _ _ _| $3F20 |                |
+/// | Sprite Palette    |       | Palettes       |
+/// |_ _ _ _ _ _ _ _ _ _| $3F10 |                |
+/// | Image Palette     |       |                |
+/// |___________________| $3F00 |________________|
+/// | Mirrors           |       |                |
+/// | $2000-$2EFF       |       |                |
+/// |_ _ _ _ _ _ _ _ _ _| $3000 |                |
+/// | Attribute Table 3 |       |                |
+/// |_ _ _ _ _ _ _ _ _ _| $2FC0 |                |
+/// | Name Table 3      |       |                |
+/// |___________________| $2C00 |                |
+/// | Attribute Table 2 |       |                |
+/// |_ _ _ _ _ _ _ _ _ _| $2BC0 |                |
+/// | Name Table 2      |       | Name Tables    |
+/// |___________________| $2800 |                |
+/// | Attribute Table 1 |       |                |
+/// |_ _ _ _ _ _ _ _ _ _| $27C0 |                |
+/// | Name Table 1      |       |                |
+/// |___________________| $2400 |                |
+/// | Attribute Table 0 |       |                |
+/// |_ _ _ _ _ _ _ _ _ _| $23C0 |                |
+/// | Name Table 0      |       |                |
+/// |___________________| $2000 |________________|
+/// | Pattern Table 1   |       |                |
+/// |_ _ _ _ _ _ _ _ _ _| $1000 | Pattern Tables |
+/// | Pattern Table 0   |       |                |
+/// |___________________| $0000 |________________|
+    pub fn read_byte(&self, virtual_address: VAddr) -> u8 {
+        if virtual_address < 0x2000 {
+            self.vram[virtual_address]
+        } else {
+            0
+        }
+    }
+
+    pub fn write_byte(&mut self, virtual_address: VAddr, val: u8) {
+        if virtual_address < 0x2000 {
+            self.vram[virtual_address] = val;
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 type rgb = [u8, ..3];
 static SYSTEM_PALETTE_SIZE: uint = 0x40;

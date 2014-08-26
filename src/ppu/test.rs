@@ -1,6 +1,8 @@
 use std::iter;
 use std::mem;
 
+use nes::VAddr;
+
 use ppu::{
     Spr,
     SprRam,
@@ -16,19 +18,22 @@ fn ppu_spr_test() {
 
 #[test]
 fn ppu_spr_ram_test() {
-    let mut spr_ram_bytes = [0u8, ..SPR_RAM_SIZE];
-    let spr_ram = SprRam::new(spr_ram_bytes);
+    let mut spr_ram = SprRam::new();
 
-    for i in range(0u8, spr_ram_bytes.len() as u8) {
+    for i in range(0, spr_ram.buf.len() as VAddr) {
         assert_eq!(spr_ram[i], 0x00);
     }
 
-    spr_ram_bytes[0x00] = 0xAA;
-    spr_ram_bytes[0x01] = 0xBB;
-    spr_ram_bytes[0x02] = SPR_PRIORITY_FLAG | SPR_H_FLIP | SPR_V_FLIP | 0b00000011;
-    spr_ram_bytes[0x03] = 0xDD;
+    spr_ram.buf[0x00] = 0xAA;
+    spr_ram.buf[0x01] = 0xBB;
+    spr_ram.buf[0x02] = SPR_PRIORITY_FLAG | SPR_H_FLIP | SPR_V_FLIP | 0b00000011;
+    spr_ram.buf[0x03] = 0xDD;
 
-    let spr_ram = SprRam::new(spr_ram_bytes);
+    assert_eq!(spr_ram[0x00], 0xAA);
+    assert_eq!(spr_ram[0x01], 0xBB);
+    assert_eq!(spr_ram[0x02], 0b11100011);
+    assert_eq!(spr_ram[0x03], 0xDD);
+
     let spr = spr_ram.spr(0);
 
     assert_eq!(spr.y(), 0xAA);

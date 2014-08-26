@@ -12,7 +12,7 @@ pub static PRG_ROM_BANK_SIZE: uint = 0x4000; //16 KB
 type PrgRomBank = [u8, ..PRG_ROM_BANK_SIZE];
 pub type PrgRom = Vec<PrgRomBank>;
 
-static CHR_ROM_BANK_SIZE: uint = 0x2000; //8 KB
+pub static CHR_ROM_BANK_SIZE: uint = 0x2000; //8 KB
 type ChrRomBank = [u8, ..CHR_ROM_BANK_SIZE];
 pub type ChrRom = Vec<ChrRomBank>;
 
@@ -25,6 +25,8 @@ type PrgRam = Vec<PrgRamBank>;
 static TRAINER_SIZE: uint = 512;
 type Trainer = [u8, ..TRAINER_SIZE];
 
+//VAddr represents an NES virtual address
+pub type VAddr = u16;
 
 pub struct Nes {
     rom_path: Path,

@@ -3,6 +3,7 @@
 use std::fmt;
 
 use nes::{PrgRom};
+use nes::{VAddr};
 
 use self::isa::{
     Instruction, 
@@ -15,8 +16,6 @@ mod isa;
 #[cfg(test)] 
 mod test;
 
-//VAddr represents an NES virtual address
-type VAddr = u16;
 
 /// # Status Register (P)
 ///
