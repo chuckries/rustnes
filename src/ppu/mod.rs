@@ -216,6 +216,70 @@ impl<'a> Spr<'a> {
     }
 }
 
+static PATTERN_TABLE_SIZE: uint = 0x1000;
+static NAME_TABLE_SIZE: uint = 0x03C0;
+static ATTRIBUTE_TABLE_SIZE: uint = 0x0040;
+
+struct VRam {
+    buf: [u8, ..0x2400], //enough for the pattern tables and one name table/attribute table
+}
+
+impl Index<u8, u8> for VRam {
+    fn index<'a>(&'a self, index: &u8) -> &'a u8 {
+        &self.buf[*index as uint]
+    }
+}
+
+impl VRam {
+    pub fn pattern_table<'a>(&'a self, idx: uint) -> PatternTable<'a> {
+        let pattern_table = 
+            if idx % 2 == 0 { self.buf.as_slice().slice_to(PATTERN_TABLE_SIZE) }
+            else {
+                self.buf.as_slice().slice_from(PATTERN_TABLE_SIZE).slice_to(PATTERN_TABLE_SIZE)
+            };
+
+        PatternTable { 
+            pattern_table: pattern_table,
+        }
+    }
+
+    pub fn name_table<'a>(&'a self, idx: uint) -> NameTable<'a> {
+        let name_table = self.buf.as_slice().slice_from(0x2000).slice_to(NAME_TABLE_SIZE + ATTRIBUTE_TABLE_SIZE);
+
+        NameTable {
+            name_table: name_table,
+        }
+    }
+}
+
+struct PatternTable<'a> {
+    pattern_table: &'a[u8],
+}
+
+impl<'a> Index<u8, u8> for PatternTable<'a> {
+    fn index<'a>(&'a self, index: &u8) -> &'a u8 {
+        &self.pattern_table[*index as uint]
+    }
+}
+
+struct NameTable<'a> {
+    name_table: &'a[u8],
+}
+
+impl<'a> NameTable<'a> {
+    fn attr_table<'a>(&'a self) -> AttrTable<'a> {
+        let attr_table = self.name_table.slice_from(NAME_TABLE_SIZE).slice_to(ATTRIBUTE_TABLE_SIZE);
+
+        AttrTable {
+            attr_table: attr_table,
+        }
+    }
+}
+
+struct AttrTable<'a> {
+    attr_table: &'a[u8],
+}
+
 type rgb = [u8, ..3];
 static SYSTEM_PALETTE_SIZE: uint = 0x40;
 static SYSTEM_PALETTE: [rgb, ..SYSTEM_PALETTE_SIZE] = [
