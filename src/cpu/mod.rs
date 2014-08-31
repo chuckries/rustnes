@@ -132,35 +132,76 @@ impl Cpu {
     //goal of this function is to execute the next instruction and return the number of cycles
     //elapsed
     pub fn instr_run(&mut self) -> uint {
+        let mut extra_cycles: uint = 0;
+
         let instr = self.instr_decode();
 
         //get the memory address referenced by this instr
-        let m_addr = self.instr_mem_addr(instr.address_mode);
+        let (m_addr, page_boundary_crossed) = self.instr_mem_addr(instr.address_mode);
 
-        if instr.instr == isa::JMP {
-            self.state.PC = m_addr;
-        } else if instr.instr == isa::JSR {
-            let pc = self.state.PC - 1;
-            self.push_addr(pc);
-            self.state.PC = m_addr;
-        } else {
-            //get the value referenced by the memory addr
-            let m = self.instr_mem_read(m_addr, instr);
-
-            //perform the action of the operation
-            let x = self.instr_exec(instr.instr, m);
-            
-            //write back to ram
-            self.instr_mem_write(m_addr, x, instr);
+        if page_boundary_crossed {
+            extra_cycles += match instr.instr {
+                isa::ADC | isa::AND | isa::CMP | isa::EOR |
+                isa::LDA | isa::LDX | isa::LDY | isa::ORA |
+                isa::SBC => 1,
+                _ => 0
+            }
         }
 
-        0
+        match instr.instr {
+            isa::JMP => self.state.PC = m_addr,
+            isa::JSR => {
+                let pc = self.state.PC - 1;
+                self.push_addr(pc);
+                self.state.PC = m_addr;
+            }
+            isa::BCC | isa::BCS | isa::BEQ | isa::BMI | 
+            isa::BNE | isa::BPL | isa::BVC | isa::BVS => {
+                let m = self.instr_mem_read(m_addr, instr);
+                extra_cycles += self.instr_do_branch(instr.instr, m);
+            }
+            _ => {
+                //get the value referenced by the memory addr
+                let m = self.instr_mem_read(m_addr, instr);
+
+                //perform the action of the operation
+                let x = self.instr_exec(instr.instr, m);
+                
+                //write back to ram
+                self.instr_mem_write(m_addr, x, instr);
+            }
+        }
+
+        instr.cycles + extra_cycles
     }
 
     pub fn instr_decode(&mut self) -> Instruction {
         Instruction::new(self.read_pc_byte())
     }
 
+    //retunrs the number of extra clock cycles due to branching/page crossing
+    fn instr_do_branch(&mut self, instr:Instr, from_mem: u8) -> uint {
+        let (flag, is_set) = match instr {
+            isa::BCC => (C_FLAG, false),
+            isa::BCS => (C_FLAG, true),
+            isa::BNE => (Z_FLAG, false),
+            isa::BEQ => (Z_FLAG, true),
+            isa::BPL => (N_FLAG, false),
+            isa::BMI => (N_FLAG, true),
+            isa::BVC => (V_FLAG, false),
+            isa::BVS => (V_FLAG, true),
+            _ => {
+                error!("Not a branch instruction!");
+                return 0;
+            }
+        };
+
+        if self.state.P.contains(flag) == is_set {
+            1 + self.add_pc_rel(from_mem)
+        } else {
+            0
+        }
+    }
 
     fn instr_exec(&mut self, instr: Instr, from_mem: u8) -> u8 {
         let a: u8 = self.state.A;
@@ -269,48 +310,6 @@ impl Cpu {
                 if a & m == 0 { self.state.P.insert(Z_FLAG); }
             }
 
-            //Branch
-            isa::BCC => {
-                if p.contains(C_FLAG) == false {
-                    self.add_pc_rel(m);
-                }
-            }
-            isa::BCS => {
-                if p.contains(C_FLAG) {
-                    self.add_pc_rel(m);
-                }
-            }
-            isa::BEQ => {
-                if p.contains(Z_FLAG) {
-                    self.add_pc_rel(m);
-                }
-            }
-            isa::BMI => {
-                if p.contains(N_FLAG) {
-                    self.add_pc_rel(m);
-                }
-            }
-            isa::BNE => {
-                if p.contains(Z_FLAG) == false {
-                    self.add_pc_rel(m);
-                }
-            }
-            isa::BPL => {
-                if p.contains(N_FLAG) == false {
-                    self.add_pc_rel(m);
-                }
-            }
-            isa::BVC => {
-                if p.contains(V_FLAG) == false {
-                    self.add_pc_rel(m);
-                }
-            }
-            isa::BVS => {
-                if p.contains(V_FLAG) {
-                    self.add_pc_rel(m);
-                }
-            }
-
             //Transfer
             isa::TAX => { self.state.X = a; self.state.P.set_zn(a); }
             isa::TXA => { self.state.A = x; self.state.P.set_zn(x); }
@@ -398,46 +397,56 @@ impl Cpu {
         }
     }
 
-    //performs the instruction's memory read phase and returns the value 
-    //read from memory
-    pub fn instr_mem_addr(&mut self, mode: AddressMode) -> VAddr {
+    //performs the instruction's memory read phase and returns a tuple of the memory address
+    //and a boolean signalling that a page boundary was crossed and an extra cycle should be 
+    //added to the instructions
+    pub fn instr_mem_addr(&mut self, mode: AddressMode) -> (VAddr, bool) {
+        let mut vaddr: VAddr = 0;
+        let mut page_boundary_crossed: bool = false;
+
         match mode {
             isa::ZP | isa::IMM | isa::REL => { 
-                self.read_pc_byte() as VAddr 
+                vaddr = self.read_pc_byte() as VAddr;
             }
             isa::ZPX => { 
-                (self.read_pc_byte() + self.state.X) as VAddr
+                vaddr = (self.read_pc_byte() + self.state.X) as VAddr;
             }
             isa::ZPY => { 
-                (self.read_pc_byte() + self.state.Y) as VAddr
+                vaddr = (self.read_pc_byte() + self.state.Y) as VAddr;
             }
             isa::ABS => { 
-                self.read_pc_addr()
+                vaddr = self.read_pc_addr();
             }
             isa::ABSX => { 
-                self.read_pc_addr() + (self.state.X as VAddr)
+                let pc_addr = self.read_pc_addr();
+                vaddr = pc_addr + (self.state.X as VAddr);
+                page_boundary_crossed = (pc_addr & 0xFF00) != (vaddr & 0xFF00);
             }
             isa::ABSY => { 
-                self.read_pc_addr() + (self.state.Y as VAddr)
+                let pc_addr = self.read_pc_addr();
+                vaddr = pc_addr + (self.state.Y as VAddr);
+                page_boundary_crossed = (pc_addr & 0xFF00) != (vaddr & 0xFF00);
             }
             isa::IND => {
                 let indirect_address: VAddr = self.read_pc_addr();
-                self.read_addr(indirect_address)
+                vaddr = self.read_addr(indirect_address);
             }
             isa::IMP | isa::ACC => { //implied and accumulator instr's have no memory reference
-                0x0000  
+                vaddr = 0x0000;
             } 
             isa::INDX=> {
                 let indirect_address: VAddr = (self.read_pc_byte() + self.state.X) as VAddr;
-                self.read_addr(indirect_address)
+                vaddr = self.read_addr(indirect_address);
             }
             isa::INDY => {
                 let indirect_address: VAddr = self.read_pc_byte() as VAddr;
-                self.read_addr(indirect_address) + (self.state.Y as VAddr)
+                vaddr = self.read_addr(indirect_address) + (self.state.Y as VAddr);
+                page_boundary_crossed = (indirect_address & 0xFF00) != (vaddr & 0xFF00);
             }
-
-            _ => { error!("Impossible match"); 0 }
+            _ => { error!("Impossible match"); }
         }
+
+        (vaddr, page_boundary_crossed)
     }
 
     //this function will read the byte at PC and increment PC by 1
@@ -457,8 +466,17 @@ impl Cpu {
         word
     }
 
-    fn add_pc_rel(&mut self, offset: u8) {
-        self.state.PC = (self.state.PC as i16 + ((offset as i8)) as i16) as u16;
+    fn add_pc_rel(&mut self, offset: u8) -> uint {
+        let pc: u16 = self.state.PC;
+
+        //the reason for the casting is that the 1 byte offset is treated like a signed 8 bit int.
+        //This allows you you to branch anywhere between +127 to -128 bytes away. This is tricky
+        //sice the pc is a 16 bit unsigned int, and we want to add an 8 bit signed int.
+        self.state.PC = (pc as i16 + (offset as i8) as i16) as u16;
+
+        //check if the relative jump crosses page boundary by checking if the hi byte of the PC is
+        //the same before and after the relative jump
+        if (pc & 0xFF00) != (self.state.PC & 0xFF00) { 1 } else { 0 }
     }
 
     fn push(&mut self, val: u8) {

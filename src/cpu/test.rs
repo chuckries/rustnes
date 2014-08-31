@@ -108,7 +108,7 @@ fn cpu_sanity_test() {
     assert_eq!(instr.address_mode, isa::ZP);
     assert_eq!(cpu.state.PC, 0x8001);
 
-    let m_addr = cpu.instr_mem_addr(instr.address_mode);
+    let (m_addr, page_boundary_crossed) = cpu.instr_mem_addr(instr.address_mode);
     assert_eq!(m_addr, 0xAA);
     assert_eq!(cpu.state.PC, 0x8002);
 
@@ -132,7 +132,7 @@ fn cpu_instr_mem_addr_zp_test() {
     cpu.state.PC = 0x8000;
     
     //$AA
-    assert_eq!(cpu.instr_mem_addr(isa::ZP), 0xAA);
+    assert_eq!(cpu.instr_mem_addr(isa::ZP), (0xAA, false));
     assert_eq!(cpu.state.PC, 0x8001);
 }
 
@@ -147,11 +147,11 @@ fn cpu_instr_mem_addr_zpx_test() {
     cpu.state.X = 0x0F;
     
     //$F0,$0F
-    assert_eq!(cpu.instr_mem_addr(isa::ZPX), 0x00FF);
+    assert_eq!(cpu.instr_mem_addr(isa::ZPX), (0x00FF, false));
     assert_eq!(cpu.state.PC, 0x8001);
 
     //$FF,$0F
-    assert_eq!(cpu.instr_mem_addr(isa::ZPX), 0x000E);
+    assert_eq!(cpu.instr_mem_addr(isa::ZPX), (0x000E, false));
     assert_eq!(cpu.state.PC, 0x8002);
 }
 
@@ -166,11 +166,11 @@ fn cpu_instr_mem_addr_zpy_test() {
     cpu.state.Y = 0x0F;
     
     //$F0,$0F
-    assert_eq!(cpu.instr_mem_addr(isa::ZPY), 0x00FF);
+    assert_eq!(cpu.instr_mem_addr(isa::ZPY), (0x00FF, false));
     assert_eq!(cpu.state.PC, 0x8001);
 
     //$FF,$0F
-    assert_eq!(cpu.instr_mem_addr(isa::ZPY), 0x000E);
+    assert_eq!(cpu.instr_mem_addr(isa::ZPY), (0x000E, false));
     assert_eq!(cpu.state.PC, 0x8002);
 }
 
@@ -184,7 +184,7 @@ fn cpu_instr_mem_addr_abs_test() {
     cpu.state.PC = 0x8000;
     
     //$BBAA
-    assert_eq!(cpu.instr_mem_addr(isa::ABS), 0xBBAA);
+    assert_eq!(cpu.instr_mem_addr(isa::ABS), (0xBBAA, false));
     assert_eq!(cpu.state.PC, 0x8002);
 }
 
@@ -201,11 +201,11 @@ fn cpu_instr_mem_addr_absx_test() {
     cpu.state.X = 2;
     
     //$BBAA,$02
-    assert_eq!(cpu.instr_mem_addr(isa::ABSX), 0xBBAC);
+    assert_eq!(cpu.instr_mem_addr(isa::ABSX), (0xBBAC, false));
     assert_eq!(cpu.state.PC, 0x8002);
 
     //$FFFF,$02
-    assert_eq!(cpu.instr_mem_addr(isa::ABSX), 0x0001);
+    assert_eq!(cpu.instr_mem_addr(isa::ABSX), (0x0001, true));
     assert_eq!(cpu.state.PC, 0x8004);
 }
 
@@ -222,11 +222,11 @@ fn cpu_instr_mem_addr_absy_test() {
     cpu.state.Y = 2;
     
     //$BBAA,$02
-    assert_eq!(cpu.instr_mem_addr(isa::ABSY), 0xBBAC);
+    assert_eq!(cpu.instr_mem_addr(isa::ABSY), (0xBBAC, false));
     assert_eq!(cpu.state.PC, 0x8002);
 
     //$FFFF,$02
-    assert_eq!(cpu.instr_mem_addr(isa::ABSY), 0x0001);
+    assert_eq!(cpu.instr_mem_addr(isa::ABSY), (0x0001, true));
     assert_eq!(cpu.state.PC, 0x8004);
 }
 
@@ -255,13 +255,13 @@ fn cpu_instr_mem_addr_ind_test() {
     //[ $CC ] $80AA
     //[ $DD ] $80AB
     //($80AA)
-    assert_eq!(cpu.instr_mem_addr(isa::IND), 0xDDCC);
+    assert_eq!(cpu.instr_mem_addr(isa::IND), (0xDDCC, false));
     assert_eq!(cpu.state.PC, 0x8002);
 
     //[ $EE ] $C0AA
     //[ $FF ] $C0AB
     //($C0AA)
-    assert_eq!(cpu.instr_mem_addr(isa::IND), 0xFFEE);
+    assert_eq!(cpu.instr_mem_addr(isa::IND), (0xFFEE, false));
     assert_eq!(cpu.state.PC, 0x8004);
 }
 
@@ -269,7 +269,7 @@ fn cpu_instr_mem_addr_ind_test() {
 fn cpu_instr_mem_addr_imp_test() {
     let mut cpu = cpu!(prg_rom!());
 
-    assert_eq!(cpu.instr_mem_addr(isa::IMP), 0x0000);
+    assert_eq!(cpu.instr_mem_addr(isa::IMP), (0x0000, false));
     assert_eq!(cpu.state.PC, 0x0000);
 }
 
@@ -277,7 +277,7 @@ fn cpu_instr_mem_addr_imp_test() {
 fn cpu_instr_mem_addr_acc_test() {
     let mut cpu = cpu!(prg_rom!());
 
-    assert_eq!(cpu.instr_mem_addr(isa::ACC), 0x0000);
+    assert_eq!(cpu.instr_mem_addr(isa::ACC), (0x0000, false));
     assert_eq!(cpu.state.PC, 0x0000);
 }
 
@@ -289,7 +289,7 @@ fn cpu_instr_mem_addr_imm_test() {
     let mut cpu = cpu!(prg_rom!(prg_rom_bank, prg_rom_bank!(0xC5)));
     cpu.state.PC = 0x8000;
 
-    assert_eq!(cpu.instr_mem_addr(isa::IMM), 0x00AA);
+    assert_eq!(cpu.instr_mem_addr(isa::IMM), (0x00AA, false));
     assert_eq!(cpu.state.PC, 0x8001);
 }
 
@@ -301,7 +301,7 @@ fn cpu_instr_mem_addr_rel_test() {
     let mut cpu = cpu!(prg_rom!(prg_rom_bank, prg_rom_bank!(0xC5)));
     cpu.state.PC = 0x8000;
 
-    assert_eq!(cpu.instr_mem_addr(isa::REL), 0x00AA);
+    assert_eq!(cpu.instr_mem_addr(isa::REL), (0x00AA, false));
     assert_eq!(cpu.state.PC, 0x8001);
 }
 
@@ -323,11 +323,11 @@ fn cpu_instr_mem_addr_indx_test() {
     cpu.state.X = 0x02;
 
     //($AA,$02)
-    assert_eq!(cpu.instr_mem_addr(isa::INDX), 0xCCBB);
+    assert_eq!(cpu.instr_mem_addr(isa::INDX), (0xCCBB, false));
     assert_eq!(cpu.state.PC, 0x8001);
 
     //($FF,$02)
-    assert_eq!(cpu.instr_mem_addr(isa::INDX), 0xEEDD);
+    assert_eq!(cpu.instr_mem_addr(isa::INDX), (0xEEDD, false));
     assert_eq!(cpu.state.PC, 0x8002);
 }
 
@@ -355,19 +355,19 @@ fn cpu_instr_mem_addr_indy_test() {
     // [ $BB ] $00AA 
     // [ $CC ] $00AB 
     //($AA),$02
-    assert_eq!(cpu.instr_mem_addr(isa::INDY), 0xCCBD);
+    assert_eq!(cpu.instr_mem_addr(isa::INDY), (0xCCBD, false));
     assert_eq!(cpu.state.PC, 0x8001);
 
     // [ $DD ] $00BB
     // [ $EE ] $00BC
     //($BB),$02
-    assert_eq!(cpu.instr_mem_addr(isa::INDY), 0xEEDF);
+    assert_eq!(cpu.instr_mem_addr(isa::INDY), (0xEEDF, false));
     assert_eq!(cpu.state.PC, 0x8002);
 
     // [ $FF ] $00CC
     // [ $FF ] $00CD
     //($CC),$02
-    assert_eq!(cpu.instr_mem_addr(isa::INDY), 0x0001);
+    assert_eq!(cpu.instr_mem_addr(isa::INDY), (0x0001, false));
     assert_eq!(cpu.state.PC, 0x8003);
 }
 
@@ -1191,58 +1191,73 @@ fn cpu_instr_exec_bit_test() {
 ///
 ///
 #[test]
-fn cpu_instr_exec_bcc_test() {
+fn cpu_instr_do_branch_bcc_test() {
     let mut cpu;
     let mut x;
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
-    x = cpu.instr_exec(isa::BCC, 0x00);
+    x = cpu.instr_do_branch(isa::BCC, 0x00);
     assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 1);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
-    x = cpu.instr_exec(isa::BCC, 0x01);
+    x = cpu.instr_do_branch(isa::BCC, 0x01);
     assert_eq!(cpu.state.PC, 0x8001);
+    assert_eq!(x, 1);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
-    x = cpu.instr_exec(isa::BCC, 0xFF);
+    x = cpu.instr_do_branch(isa::BCC, 0xFF);
     assert_eq!(cpu.state.PC, 0x7FFF);
+    assert_eq!(x, 2);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
-    x = cpu.instr_exec(isa::BCC, 0x7F);
+    x = cpu.instr_do_branch(isa::BCC, 0x7F);
     assert_eq!(cpu.state.PC, 0x807F);
+    assert_eq!(x, 1);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
-    x = cpu.instr_exec(isa::BCC, 0x80);
+    x = cpu.instr_do_branch(isa::BCC, 0x80);
     assert_eq!(cpu.state.PC, 0x7F80);
+    assert_eq!(x, 2);
+
+    cpu = cpu!();
+    cpu.state.PC = 0x80FF;
+    x = cpu.instr_do_branch(isa::BCC, 0x01);
+    assert_eq!(cpu.state.PC, 0x8100);
+    assert_eq!(x, 2);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
     cpu.state.P.insert(C_FLAG);
-    x = cpu.instr_exec(isa::BCC, 0x01);
+    x = cpu.instr_do_branch(isa::BCC, 0x01);
     assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 0);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
     cpu.state.P.insert(C_FLAG);
-    x = cpu.instr_exec(isa::BCC, 0xFF);
+    x = cpu.instr_do_branch(isa::BCC, 0xFF);
     assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 0);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
     cpu.state.P.insert(C_FLAG);
-    x = cpu.instr_exec(isa::BCC, 0x7F);
+    x = cpu.instr_do_branch(isa::BCC, 0x7F);
     assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 0);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
     cpu.state.P.insert(C_FLAG);
-    x = cpu.instr_exec(isa::BCC, 0x80);
+    x = cpu.instr_do_branch(isa::BCC, 0x80);
     assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 0);
 }
 
 #[test]
