@@ -1,4 +1,12 @@
 [root]
 name = "rustnes"
 version = "0.0.1"
+dependencies = [
+ "sdl2 0.0.1 (git+https://github.com/chuckries/rust-sdl2#821a3842ac1cd236b53d8be6ae056b87a06b6c1f)",
+]
+
+[[package]]
+name = "sdl2"
+version = "0.0.1"
+source = "git+https://github.com/chuckries/rust-sdl2#821a3842ac1cd236b53d8be6ae056b87a06b6c1f"
 

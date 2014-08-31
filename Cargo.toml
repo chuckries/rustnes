@@ -3,3 +3,7 @@
 name = "rustnes"
 version = "0.0.1"
 authors = [ "Chuck Ries chuck.ries@gmail.com" ]
+
+[dependencies.sdl2]
+
+git = "https://github.com/chuckries/rust-sdl2"
