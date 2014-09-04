@@ -1,9 +1,12 @@
 #[macro_escape]
 
 use std::fmt;
+use std::io;
 
 use nes::{PrgRom};
 use nes::{VAddr};
+
+use ppu::{Ppu};
 
 use self::isa::{
     Instruction, 
@@ -113,20 +116,39 @@ pub struct Cpu {
     state: CpuState,
     prg_rom: PrgRom,
     ram: Ram,
+    pub ppu: Ppu,
 }
 
 impl Cpu {
-    pub fn new(prg_rom: PrgRom) -> Cpu {
+    pub fn new(prg_rom: PrgRom, ppu: Ppu) -> Cpu {
         let cpu_state = CpuState::new();
 
         Cpu { 
             state: cpu_state,
             prg_rom: prg_rom,
             ram: [0u8, ..RAM_SIZE],
+            ppu: ppu,
         }
     }
 
+    pub fn reset(&mut self)
+    {
+        //set the pc to the reset addr
+        self.state.PC = self.read_addr(0xFFFC);
+    }
+
     pub fn run(&mut self) {
+
+    }
+
+    pub fn run_cycles(&mut self, cycles: &mut int) {
+        let mut reader = io::stdin();
+        loop {
+            *cycles -= self.instr_run() as int;
+            info!("Remaining cycles: {}", *cycles);
+            //reader.read_line();
+            if *cycles <= 0 { break; }
+        }
     }
 
     //goal of this function is to execute the next instruction and return the number of cycles
@@ -134,10 +156,16 @@ impl Cpu {
     pub fn instr_run(&mut self) -> uint {
         let mut extra_cycles: uint = 0;
 
+        info!("PC: {:x}", self.state.PC);
+
         let instr = self.instr_decode();
 
+        info!("Instruction: {} {}", instr.instr, instr.address_mode);
+
         //get the memory address referenced by this instr
-        let (m_addr, page_boundary_crossed) = self.instr_mem_addr(instr.address_mode);
+        let (mem_addr, page_boundary_crossed) = self.instr_mem_addr(instr.address_mode);
+
+        info!("mem_addr: {:x}", mem_addr);
 
         if page_boundary_crossed {
             extra_cycles += match instr.instr {
@@ -149,26 +177,28 @@ impl Cpu {
         }
 
         match instr.instr {
-            isa::JMP => self.state.PC = m_addr,
+            isa::JMP => self.state.PC = mem_addr,
             isa::JSR => {
                 let pc = self.state.PC - 1;
                 self.push_addr(pc);
-                self.state.PC = m_addr;
+                self.state.PC = mem_addr;
             }
             isa::BCC | isa::BCS | isa::BEQ | isa::BMI | 
             isa::BNE | isa::BPL | isa::BVC | isa::BVS => {
-                let m = self.instr_mem_read(m_addr, instr);
-                extra_cycles += self.instr_do_branch(instr.instr, m);
+                let mem = self.instr_mem_read(mem_addr, instr);
+                extra_cycles += self.instr_do_branch(instr.instr, mem);
             }
             _ => {
                 //get the value referenced by the memory addr
-                let m = self.instr_mem_read(m_addr, instr);
+                let mem = self.instr_mem_read(mem_addr, instr);
+
+                info!("mem: {:x}", mem);
 
                 //perform the action of the operation
-                let x = self.instr_exec(instr.instr, m);
+                let x = self.instr_exec(instr.instr, mem);
                 
                 //write back to ram
-                self.instr_mem_write(m_addr, x, instr);
+                self.instr_mem_write(mem_addr, x, instr);
             }
         }
 
@@ -359,7 +389,7 @@ impl Cpu {
         out
     }
 
-    pub fn instr_mem_read(&self, addr: VAddr, instr: Instruction) -> u8 {
+    pub fn instr_mem_read(&mut self, addr: VAddr, instr: Instruction) -> u8 {
         let am = instr.address_mode;
 
         if am == isa::ACC {
@@ -451,7 +481,8 @@ impl Cpu {
 
     //this function will read the byte at PC and increment PC by 1
     fn read_pc_byte(&mut self) -> u8 {
-        let byte = self.read_byte(self.state.PC);
+        let pc = self.state.PC;
+        let byte = self.read_byte(pc);
         self.state.PC += 1;
         byte
     }
@@ -504,7 +535,7 @@ impl Cpu {
         word
     }
 
-    pub fn read_addr(&self, virtual_address: VAddr) -> VAddr {
+    pub fn read_addr(&mut self, virtual_address: VAddr) -> VAddr {
         let lo: u8 = self.read_byte(virtual_address);
         let hi: u8 = self.read_byte(virtual_address + 1);
 
@@ -543,7 +574,7 @@ impl Cpu {
 /// |_______________| $0000 |_______________|
 
     //Read a byte from the memory bus
-    fn read_byte(&self, virtual_address: VAddr) -> u8 {
+    fn read_byte(&mut self, virtual_address: VAddr) -> u8 {
         if virtual_address < 0x2000 {
             let address: uint = (virtual_address & 0x07FF) as uint; //Mirrored after 0x0800
             self.ram[address]
@@ -554,7 +585,7 @@ impl Cpu {
             match address {
                 0 => { 0x11 } //PPU Control Register 1
                 1 => { 0x22 } //PPU Control Register 2
-                2 => { 0x33 } //PPU Status Register
+                2 => { self.ppu.read_ppu_status() } //PPU Status Register
                 3 => { 0x44 } //SPR-RAM Address Register
                 4 => { 0x55 } //SPR-RAM I/O Register
                 5 => { 0x66 } //VRAM Address Register 1

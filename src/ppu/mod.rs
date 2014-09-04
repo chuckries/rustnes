@@ -243,7 +243,7 @@ impl VRam {
         let mut vram_bytes = [0u8, ..0x2400];
 
         //TODO full ChrRomBank support
-        for i in range(0u, vram_bytes.len()) {
+        for i in range(0u, chr_rom[0].len()) {
             vram_bytes[i] = chr_rom[0][i];
         }
 
@@ -325,12 +325,46 @@ struct AttrTable<'a> {
 
 
 
+struct PpuRegisters {
+    ppu_status: PpuStatus,
+}
 
+impl PpuRegisters {
+    pub fn new() -> PpuRegisters {
+        PpuRegisters {
+            ppu_status: PpuStatus::new(),
+        }
+    }
+}
 
+//TODO least significant bits
+struct PpuStatus {
+    sprite_overflow: bool,
+    sprite_zero_hit: bool,
+    v_blank: bool,
+}
+
+impl PpuStatus {
+    pub fn new() -> PpuStatus {
+        PpuStatus {
+            sprite_overflow: false,
+            sprite_zero_hit: false,
+            v_blank: false,
+        }
+    }
+    pub fn read(&self) -> u8 {
+        let mut reg: u8 = 0;
+        if self.sprite_overflow { reg |= 0b00100000; }
+        if self.sprite_zero_hit { reg |= 0b01000000; }
+        if self.v_blank { reg |= 0b10000000; }
+        reg
+    }
+}
 
 pub struct Ppu {
     vram: VRam,
     spr_ram: SprRam,
+    registers: PpuRegisters,
 }
 
 impl Ppu {
@@ -341,6 +375,25 @@ impl Ppu {
         Ppu {
             vram: vram,
             spr_ram: spr_ram,
+            registers: PpuRegisters::new(),
+        }
+    }
+
+    //$2002
+    pub fn read_ppu_status(&mut self) -> u8 {
+        let reg = self.registers.ppu_status.read();
+        self.registers.ppu_status.v_blank = false;
+
+        reg
+    }
+
+    pub fn do_scanline(&mut self, scanline: uint) {
+        info!("Scanline: {}", scanline);
+        if scanline == 240 { self.registers.ppu_status.v_blank = true; }
+        if scanline == 260 { 
+            self.registers.ppu_status.v_blank = false;
+            self.registers.ppu_status.sprite_zero_hit = false;
+            self.registers.ppu_status.sprite_overflow = false;
         }
     }
 

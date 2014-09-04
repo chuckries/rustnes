@@ -9,13 +9,14 @@ fn main() {
 
     let filename = 
         if args.len() > 1 { 
-            args[1].as_slice() 
+            args[0].as_slice() 
         } else {
             "mario.nes"
         };
 
     let path = Path::new(filename);
     let mut nes = Nes::new(path);
+    nes.reset();
 
     nes.run();
 }

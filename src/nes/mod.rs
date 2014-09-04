@@ -5,8 +5,12 @@ use std::mem;
 
 use cpu::Cpu;
 
+use ppu::Ppu;
+
 #[cfg(test)]
 pub mod test;
+
+static CYCLES_PER_SCANLINE: int = 113;
 
 pub static PRG_ROM_BANK_SIZE: uint = 0x4000; //16 KB
 type PrgRomBank = [u8, ..PRG_ROM_BANK_SIZE];
@@ -43,8 +47,9 @@ impl Nes {
 
         //TODO Get things like horizontal/vertical scrolling here
 
+        let ppu = Ppu::new(chr_rom);
 
-        let cpu = Cpu::new(prg_rom);
+        let cpu = Cpu::new(prg_rom, ppu);
 
         Nes { 
             rom_path: rom_path,
@@ -53,8 +58,23 @@ impl Nes {
         }
     }
 
+    pub fn reset(&mut self) {
+        self.cpu.reset();
+    }
+
     pub fn run(&mut self) {
-        self.cpu.run();
+        let mut cycleCount = CYCLES_PER_SCANLINE;
+        let mut scanline: uint = 0;
+        
+        loop {
+            self.cpu.run_cycles(&mut cycleCount);
+            info!("After run_cycles");
+            self.cpu.ppu.do_scanline(scanline);
+            scanline += 1;
+            if scanline == 262 { scanline = 0; }
+
+            cycleCount += CYCLES_PER_SCANLINE;
+        }
     }
 
     fn read_rom(path: &Path) -> (RomHeader, PrgRom, ChrRom) {
