@@ -1,11 +1,14 @@
 #[macro_escape]
 
 use nes::{PrgRom, PRG_ROM_BANK_SIZE};
+use nes::{ChrRom, CHR_ROM_BANK_SIZE};
 use nes::test;
 
 use cpu::{Cpu, CpuState, CpuFlags, Ram, RAM_SIZE};
 use cpu::{C_FLAG, Z_FLAG, I_FLAG, D_FLAG, B_FLAG, X_FLAG, V_FLAG, N_FLAG};
 use cpu::isa;
+
+use ppu::Ppu;
 
 /// # Macros
 ///
@@ -56,6 +59,7 @@ fn get_empty_cpu() -> Cpu {
         state: state,
         prg_rom: prg_rom,
         ram: ram,
+        ppu: Ppu::new(vec![[0u8, ..CHR_ROM_BANK_SIZE]]),
     }
 }
 
@@ -67,6 +71,7 @@ fn get_cpu_with_prg_rom(prg_rom: PrgRom) -> Cpu {
         state: state,
         prg_rom: prg_rom,
         ram: ram,
+        ppu: Ppu::new(vec![[0u8, ..CHR_ROM_BANK_SIZE]]),
     }
 }
 
@@ -77,6 +82,7 @@ fn get_cpu_with_prg_rom_and_ram(prg_rom: PrgRom, ram: Ram) -> Cpu {
         state: state,
         prg_rom: prg_rom,
         ram: ram,
+        ppu: Ppu::new(vec![[0u8, ..CHR_ROM_BANK_SIZE]]),
     }
 }
 
