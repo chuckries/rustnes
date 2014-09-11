@@ -373,7 +373,7 @@ fn cpu_instr_mem_addr_indy_test() {
     // [ $FF ] $00CC
     // [ $FF ] $00CD
     //($CC),$02
-    assert_eq!(cpu.instr_mem_addr(isa::INDY), (0x0001, false));
+    assert_eq!(cpu.instr_mem_addr(isa::INDY), (0x0001, true));
     assert_eq!(cpu.state.PC, 0x8003);
 }
 
@@ -1267,392 +1267,501 @@ fn cpu_instr_do_branch_bcc_test() {
 }
 
 #[test]
-fn cpu_instr_exec_bcs_test() {
+fn cpu_instr_do_branch_bcs_test() {
     let mut cpu;
     let mut x;
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
     cpu.state.P.insert(C_FLAG);
-    x = cpu.instr_exec(isa::BCS, 0x00);
+    x = cpu.instr_do_branch(isa::BCS, 0x00);
     assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 1);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
     cpu.state.P.insert(C_FLAG);
-    x = cpu.instr_exec(isa::BCS, 0x01);
+    x = cpu.instr_do_branch(isa::BCS, 0x01);
     assert_eq!(cpu.state.PC, 0x8001);
+    assert_eq!(x, 1);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
     cpu.state.P.insert(C_FLAG);
-    x = cpu.instr_exec(isa::BCS, 0xFF);
+    x = cpu.instr_do_branch(isa::BCS, 0xFF);
     assert_eq!(cpu.state.PC, 0x7FFF);
+    assert_eq!(x, 2);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
     cpu.state.P.insert(C_FLAG);
-    x = cpu.instr_exec(isa::BCS, 0x7F);
+    x = cpu.instr_do_branch(isa::BCS, 0x7F);
     assert_eq!(cpu.state.PC, 0x807F);
+    assert_eq!(x, 1);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
     cpu.state.P.insert(C_FLAG);
-    x = cpu.instr_exec(isa::BCS, 0x80);
+    x = cpu.instr_do_branch(isa::BCS, 0x80);
     assert_eq!(cpu.state.PC, 0x7F80);
+    assert_eq!(x, 2);
+
+    cpu = cpu!();
+    cpu.state.PC = 0x80FF;
+    cpu.state.P.insert(C_FLAG);
+    x = cpu.instr_do_branch(isa::BCS, 0x01);
+    assert_eq!(cpu.state.PC, 0x8100);
+    assert_eq!(x, 2);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
-    x = cpu.instr_exec(isa::BCS, 0x01);
+    x = cpu.instr_do_branch(isa::BCS, 0x01);
     assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 0);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
-    x = cpu.instr_exec(isa::BCS, 0xFF);
+    x = cpu.instr_do_branch(isa::BCS, 0xFF);
     assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 0);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
-    x = cpu.instr_exec(isa::BCS, 0x7F);
+    x = cpu.instr_do_branch(isa::BCS, 0x7F);
     assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 0);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
-    x = cpu.instr_exec(isa::BCS, 0x80);
+    x = cpu.instr_do_branch(isa::BCS, 0x80);
     assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 0);
 }
 
 #[test]
-fn cpu_instr_exec_beq_test() {
+fn cpu_instr_do_branch_bne_test() {
+    let mut cpu;
+    let mut x;
+
+    cpu = cpu!();
+    cpu.state.PC = 0x8000;
+    x = cpu.instr_do_branch(isa::BNE, 0x00);
+    assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 1);
+
+    cpu = cpu!();
+    cpu.state.PC = 0x8000;
+    x = cpu.instr_do_branch(isa::BNE, 0x01);
+    assert_eq!(cpu.state.PC, 0x8001);
+    assert_eq!(x, 1);
+
+    cpu = cpu!();
+    cpu.state.PC = 0x8000;
+    x = cpu.instr_do_branch(isa::BNE, 0xFF);
+    assert_eq!(cpu.state.PC, 0x7FFF);
+    assert_eq!(x, 2);
+
+    cpu = cpu!();
+    cpu.state.PC = 0x8000;
+    x = cpu.instr_do_branch(isa::BNE, 0x7F);
+    assert_eq!(cpu.state.PC, 0x807F);
+    assert_eq!(x, 1);
+
+    cpu = cpu!();
+    cpu.state.PC = 0x8000;
+    x = cpu.instr_do_branch(isa::BNE, 0x80);
+    assert_eq!(cpu.state.PC, 0x7F80);
+    assert_eq!(x, 2);
+
+    cpu = cpu!();
+    cpu.state.PC = 0x80FF;
+    x = cpu.instr_do_branch(isa::BNE, 0x01);
+    assert_eq!(cpu.state.PC, 0x8100);
+    assert_eq!(x, 2);
+
+    cpu = cpu!();
+    cpu.state.PC = 0x8000;
+    cpu.state.P.insert(Z_FLAG);
+    x = cpu.instr_do_branch(isa::BNE, 0x01);
+    assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 0);
+
+    cpu = cpu!();
+    cpu.state.PC = 0x8000;
+    cpu.state.P.insert(Z_FLAG);
+    x = cpu.instr_do_branch(isa::BNE, 0xFF);
+    assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 0);
+
+    cpu = cpu!();
+    cpu.state.PC = 0x8000;
+    cpu.state.P.insert(Z_FLAG);
+    x = cpu.instr_do_branch(isa::BNE, 0x7F);
+    assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 0);
+
+    cpu = cpu!();
+    cpu.state.PC = 0x8000;
+    cpu.state.P.insert(Z_FLAG);
+    x = cpu.instr_do_branch(isa::BNE, 0x80);
+    assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 0);
+}
+
+#[test]
+fn cpu_instr_do_branch_beq_test() {
     let mut cpu;
     let mut x;
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
     cpu.state.P.insert(Z_FLAG);
-    x = cpu.instr_exec(isa::BEQ, 0x00);
+    x = cpu.instr_do_branch(isa::BEQ, 0x00);
     assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 1);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
     cpu.state.P.insert(Z_FLAG);
-    x = cpu.instr_exec(isa::BEQ, 0x01);
+    x = cpu.instr_do_branch(isa::BEQ, 0x01);
     assert_eq!(cpu.state.PC, 0x8001);
+    assert_eq!(x, 1);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
     cpu.state.P.insert(Z_FLAG);
-    x = cpu.instr_exec(isa::BEQ, 0xFF);
+    x = cpu.instr_do_branch(isa::BEQ, 0xFF);
     assert_eq!(cpu.state.PC, 0x7FFF);
+    assert_eq!(x, 2);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
     cpu.state.P.insert(Z_FLAG);
-    x = cpu.instr_exec(isa::BEQ, 0x7F);
+    x = cpu.instr_do_branch(isa::BEQ, 0x7F);
     assert_eq!(cpu.state.PC, 0x807F);
+    assert_eq!(x, 1);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
     cpu.state.P.insert(Z_FLAG);
-    x = cpu.instr_exec(isa::BEQ, 0x80);
+    x = cpu.instr_do_branch(isa::BEQ, 0x80);
     assert_eq!(cpu.state.PC, 0x7F80);
+    assert_eq!(x, 2);
+
+    cpu = cpu!();
+    cpu.state.PC = 0x80FF;
+    cpu.state.P.insert(Z_FLAG);
+    x = cpu.instr_do_branch(isa::BEQ, 0x01);
+    assert_eq!(cpu.state.PC, 0x8100);
+    assert_eq!(x, 2);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
-    x = cpu.instr_exec(isa::BEQ, 0x01);
+    x = cpu.instr_do_branch(isa::BEQ, 0x01);
     assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 0);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
-    x = cpu.instr_exec(isa::BEQ, 0xFF);
+    x = cpu.instr_do_branch(isa::BEQ, 0xFF);
     assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 0);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
-    x = cpu.instr_exec(isa::BEQ, 0x7F);
+    x = cpu.instr_do_branch(isa::BEQ, 0x7F);
     assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 0);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
-    x = cpu.instr_exec(isa::BEQ, 0x80);
+    x = cpu.instr_do_branch(isa::BEQ, 0x80);
     assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 0);
 }
 
 #[test]
-fn cpu_instr_exec_bmi_test() {
+fn cpu_instr_do_branch_bpl_test() {
+    let mut cpu;
+    let mut x;
+
+    cpu = cpu!();
+    cpu.state.PC = 0x8000;
+    x = cpu.instr_do_branch(isa::BPL, 0x00);
+    assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 1);
+
+    cpu = cpu!();
+    cpu.state.PC = 0x8000;
+    x = cpu.instr_do_branch(isa::BPL, 0x01);
+    assert_eq!(cpu.state.PC, 0x8001);
+    assert_eq!(x, 1);
+
+    cpu = cpu!();
+    cpu.state.PC = 0x8000;
+    x = cpu.instr_do_branch(isa::BPL, 0xFF);
+    assert_eq!(cpu.state.PC, 0x7FFF);
+    assert_eq!(x, 2);
+
+    cpu = cpu!();
+    cpu.state.PC = 0x8000;
+    x = cpu.instr_do_branch(isa::BPL, 0x7F);
+    assert_eq!(cpu.state.PC, 0x807F);
+    assert_eq!(x, 1);
+
+    cpu = cpu!();
+    cpu.state.PC = 0x8000;
+    x = cpu.instr_do_branch(isa::BPL, 0x80);
+    assert_eq!(cpu.state.PC, 0x7F80);
+    assert_eq!(x, 2);
+
+    cpu = cpu!();
+    cpu.state.PC = 0x80FF;
+    x = cpu.instr_do_branch(isa::BPL, 0x01);
+    assert_eq!(cpu.state.PC, 0x8100);
+    assert_eq!(x, 2);
+
+    cpu = cpu!();
+    cpu.state.PC = 0x8000;
+    cpu.state.P.insert(N_FLAG);
+    x = cpu.instr_do_branch(isa::BPL, 0x01);
+    assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 0);
+
+    cpu = cpu!();
+    cpu.state.PC = 0x8000;
+    cpu.state.P.insert(N_FLAG);
+    x = cpu.instr_do_branch(isa::BPL, 0xFF);
+    assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 0);
+
+    cpu = cpu!();
+    cpu.state.PC = 0x8000;
+    cpu.state.P.insert(N_FLAG);
+    x = cpu.instr_do_branch(isa::BPL, 0x7F);
+    assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 0);
+
+    cpu = cpu!();
+    cpu.state.PC = 0x8000;
+    cpu.state.P.insert(N_FLAG);
+    x = cpu.instr_do_branch(isa::BPL, 0x80);
+    assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 0);
+}
+
+#[test]
+fn cpu_instr_do_branch_bmi_test() {
     let mut cpu;
     let mut x;
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
     cpu.state.P.insert(N_FLAG);
-    x = cpu.instr_exec(isa::BMI, 0x00);
+    x = cpu.instr_do_branch(isa::BMI, 0x00);
     assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 1);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
     cpu.state.P.insert(N_FLAG);
-    x = cpu.instr_exec(isa::BMI, 0x01);
+    x = cpu.instr_do_branch(isa::BMI, 0x01);
     assert_eq!(cpu.state.PC, 0x8001);
+    assert_eq!(x, 1);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
     cpu.state.P.insert(N_FLAG);
-    x = cpu.instr_exec(isa::BMI, 0xFF);
+    x = cpu.instr_do_branch(isa::BMI, 0xFF);
     assert_eq!(cpu.state.PC, 0x7FFF);
+    assert_eq!(x, 2);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
     cpu.state.P.insert(N_FLAG);
-    x = cpu.instr_exec(isa::BMI, 0x7F);
+    x = cpu.instr_do_branch(isa::BMI, 0x7F);
     assert_eq!(cpu.state.PC, 0x807F);
+    assert_eq!(x, 1);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
     cpu.state.P.insert(N_FLAG);
-    x = cpu.instr_exec(isa::BMI, 0x80);
+    x = cpu.instr_do_branch(isa::BMI, 0x80);
     assert_eq!(cpu.state.PC, 0x7F80);
+    assert_eq!(x, 2);
+
+    cpu = cpu!();
+    cpu.state.PC = 0x80FF;
+    cpu.state.P.insert(N_FLAG);
+    x = cpu.instr_do_branch(isa::BMI, 0x01);
+    assert_eq!(cpu.state.PC, 0x8100);
+    assert_eq!(x, 2);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
-    x = cpu.instr_exec(isa::BMI, 0x01);
+    x = cpu.instr_do_branch(isa::BMI, 0x01);
     assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 0);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
-    x = cpu.instr_exec(isa::BMI, 0xFF);
+    x = cpu.instr_do_branch(isa::BMI, 0xFF);
     assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 0);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
-    x = cpu.instr_exec(isa::BMI, 0x7F);
+    x = cpu.instr_do_branch(isa::BMI, 0x7F);
     assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 0);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
-    x = cpu.instr_exec(isa::BMI, 0x80);
+    x = cpu.instr_do_branch(isa::BMI, 0x80);
     assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 0);
 }
 
 #[test]
-fn cpu_instr_exec_bne_test() {
+fn cpu_instr_do_branch_bvc_test() {
     let mut cpu;
     let mut x;
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
-    x = cpu.instr_exec(isa::BNE, 0x00);
+    x = cpu.instr_do_branch(isa::BVC, 0x00);
     assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 1);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
-    x = cpu.instr_exec(isa::BNE, 0x01);
+    x = cpu.instr_do_branch(isa::BVC, 0x01);
     assert_eq!(cpu.state.PC, 0x8001);
+    assert_eq!(x, 1);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
-    x = cpu.instr_exec(isa::BNE, 0xFF);
+    x = cpu.instr_do_branch(isa::BVC, 0xFF);
     assert_eq!(cpu.state.PC, 0x7FFF);
+    assert_eq!(x, 2);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
-    x = cpu.instr_exec(isa::BNE, 0x7F);
+    x = cpu.instr_do_branch(isa::BVC, 0x7F);
     assert_eq!(cpu.state.PC, 0x807F);
+    assert_eq!(x, 1);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
-    x = cpu.instr_exec(isa::BNE, 0x80);
+    x = cpu.instr_do_branch(isa::BVC, 0x80);
     assert_eq!(cpu.state.PC, 0x7F80);
+    assert_eq!(x, 2);
+
+    cpu = cpu!();
+    cpu.state.PC = 0x80FF;
+    x = cpu.instr_do_branch(isa::BVC, 0x01);
+    assert_eq!(cpu.state.PC, 0x8100);
+    assert_eq!(x, 2);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
-    cpu.state.P.insert(Z_FLAG);
-    x = cpu.instr_exec(isa::BNE, 0x01);
+    cpu.state.P.insert(V_FLAG);
+    x = cpu.instr_do_branch(isa::BVC, 0x01);
     assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 0);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
-    cpu.state.P.insert(Z_FLAG);
-    x = cpu.instr_exec(isa::BNE, 0xFF);
+    cpu.state.P.insert(V_FLAG);
+    x = cpu.instr_do_branch(isa::BVC, 0xFF);
     assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 0);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
-    cpu.state.P.insert(Z_FLAG);
-    x = cpu.instr_exec(isa::BNE, 0x7F);
+    cpu.state.P.insert(V_FLAG);
+    x = cpu.instr_do_branch(isa::BVC, 0x7F);
     assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 0);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
-    cpu.state.P.insert(Z_FLAG);
-    x = cpu.instr_exec(isa::BNE, 0x80);
+    cpu.state.P.insert(V_FLAG);
+    x = cpu.instr_do_branch(isa::BVC, 0x80);
     assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 0);
 }
 
 #[test]
-fn cpu_instr_exec_bpl_test() {
-    let mut cpu;
-    let mut x;
-
-    cpu = cpu!();
-    cpu.state.PC = 0x8000;
-    x = cpu.instr_exec(isa::BPL, 0x00);
-    assert_eq!(cpu.state.PC, 0x8000);
-
-    cpu = cpu!();
-    cpu.state.PC = 0x8000;
-    x = cpu.instr_exec(isa::BPL, 0x01);
-    assert_eq!(cpu.state.PC, 0x8001);
-
-    cpu = cpu!();
-    cpu.state.PC = 0x8000;
-    x = cpu.instr_exec(isa::BPL, 0xFF);
-    assert_eq!(cpu.state.PC, 0x7FFF);
-
-    cpu = cpu!();
-    cpu.state.PC = 0x8000;
-    x = cpu.instr_exec(isa::BPL, 0x7F);
-    assert_eq!(cpu.state.PC, 0x807F);
-
-    cpu = cpu!();
-    cpu.state.PC = 0x8000;
-    x = cpu.instr_exec(isa::BPL, 0x80);
-    assert_eq!(cpu.state.PC, 0x7F80);
-
-    cpu = cpu!();
-    cpu.state.PC = 0x8000;
-    cpu.state.P.insert(N_FLAG);
-    x = cpu.instr_exec(isa::BPL, 0x01);
-    assert_eq!(cpu.state.PC, 0x8000);
-
-    cpu = cpu!();
-    cpu.state.PC = 0x8000;
-    cpu.state.P.insert(N_FLAG);
-    x = cpu.instr_exec(isa::BPL, 0xFF);
-    assert_eq!(cpu.state.PC, 0x8000);
-
-    cpu = cpu!();
-    cpu.state.PC = 0x8000;
-    cpu.state.P.insert(N_FLAG);
-    x = cpu.instr_exec(isa::BPL, 0x7F);
-    assert_eq!(cpu.state.PC, 0x8000);
-
-    cpu = cpu!();
-    cpu.state.PC = 0x8000;
-    cpu.state.P.insert(N_FLAG);
-    x = cpu.instr_exec(isa::BPL, 0x80);
-    assert_eq!(cpu.state.PC, 0x8000);
-}
-
-#[test]
-fn cpu_instr_exec_bvc_test() {
-    let mut cpu;
-    let mut x;
-
-    cpu = cpu!();
-    cpu.state.PC = 0x8000;
-    x = cpu.instr_exec(isa::BVC, 0x00);
-    assert_eq!(cpu.state.PC, 0x8000);
-
-    cpu = cpu!();
-    cpu.state.PC = 0x8000;
-    x = cpu.instr_exec(isa::BVC, 0x01);
-    assert_eq!(cpu.state.PC, 0x8001);
-
-    cpu = cpu!();
-    cpu.state.PC = 0x8000;
-    x = cpu.instr_exec(isa::BVC, 0xFF);
-    assert_eq!(cpu.state.PC, 0x7FFF);
-
-    cpu = cpu!();
-    cpu.state.PC = 0x8000;
-    x = cpu.instr_exec(isa::BVC, 0x7F);
-    assert_eq!(cpu.state.PC, 0x807F);
-
-    cpu = cpu!();
-    cpu.state.PC = 0x8000;
-    x = cpu.instr_exec(isa::BVC, 0x80);
-    assert_eq!(cpu.state.PC, 0x7F80);
-
-    cpu = cpu!();
-    cpu.state.PC = 0x8000;
-    cpu.state.P.insert(V_FLAG);
-    x = cpu.instr_exec(isa::BVC, 0x01);
-    assert_eq!(cpu.state.PC, 0x8000);
-
-    cpu = cpu!();
-    cpu.state.PC = 0x8000;
-    cpu.state.P.insert(V_FLAG);
-    x = cpu.instr_exec(isa::BVC, 0xFF);
-    assert_eq!(cpu.state.PC, 0x8000);
-
-    cpu = cpu!();
-    cpu.state.PC = 0x8000;
-    cpu.state.P.insert(V_FLAG);
-    x = cpu.instr_exec(isa::BVC, 0x7F);
-    assert_eq!(cpu.state.PC, 0x8000);
-
-    cpu = cpu!();
-    cpu.state.PC = 0x8000;
-    cpu.state.P.insert(V_FLAG);
-    x = cpu.instr_exec(isa::BVC, 0x80);
-    assert_eq!(cpu.state.PC, 0x8000);
-}
-
-#[test]
-fn cpu_instr_exec_bvs_test() {
+fn cpu_instr_do_branch_bvs_test() {
     let mut cpu;
     let mut x;
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
     cpu.state.P.insert(V_FLAG);
-    x = cpu.instr_exec(isa::BVS, 0x00);
+    x = cpu.instr_do_branch(isa::BVS, 0x00);
     assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 1);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
     cpu.state.P.insert(V_FLAG);
-    x = cpu.instr_exec(isa::BVS, 0x01);
+    x = cpu.instr_do_branch(isa::BVS, 0x01);
     assert_eq!(cpu.state.PC, 0x8001);
+    assert_eq!(x, 1);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
     cpu.state.P.insert(V_FLAG);
-    x = cpu.instr_exec(isa::BVS, 0xFF);
+    x = cpu.instr_do_branch(isa::BVS, 0xFF);
     assert_eq!(cpu.state.PC, 0x7FFF);
+    assert_eq!(x, 2);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
     cpu.state.P.insert(V_FLAG);
-    x = cpu.instr_exec(isa::BVS, 0x7F);
+    x = cpu.instr_do_branch(isa::BVS, 0x7F);
     assert_eq!(cpu.state.PC, 0x807F);
+    assert_eq!(x, 1);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
     cpu.state.P.insert(V_FLAG);
-    x = cpu.instr_exec(isa::BVS, 0x80);
+    x = cpu.instr_do_branch(isa::BVS, 0x80);
     assert_eq!(cpu.state.PC, 0x7F80);
+    assert_eq!(x, 2);
+
+    cpu = cpu!();
+    cpu.state.PC = 0x80FF;
+    cpu.state.P.insert(V_FLAG);
+    x = cpu.instr_do_branch(isa::BVS, 0x01);
+    assert_eq!(cpu.state.PC, 0x8100);
+    assert_eq!(x, 2);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
-    x = cpu.instr_exec(isa::BVS, 0x01);
+    x = cpu.instr_do_branch(isa::BVS, 0x01);
     assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 0);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
-    x = cpu.instr_exec(isa::BVS, 0xFF);
+    x = cpu.instr_do_branch(isa::BVS, 0xFF);
     assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 0);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
-    x = cpu.instr_exec(isa::BVS, 0x7F);
+    x = cpu.instr_do_branch(isa::BVS, 0x7F);
     assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 0);
 
     cpu = cpu!();
     cpu.state.PC = 0x8000;
-    x = cpu.instr_exec(isa::BVS, 0x80);
+    x = cpu.instr_do_branch(isa::BVS, 0x80);
     assert_eq!(cpu.state.PC, 0x8000);
+    assert_eq!(x, 0);
 }
 
 /// ## Transfer

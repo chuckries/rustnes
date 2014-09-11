@@ -470,8 +470,9 @@ impl Cpu {
             }
             isa::INDY => {
                 let indirect_address: VAddr = self.read_pc_byte() as VAddr;
-                vaddr = self.read_addr(indirect_address) + (self.state.Y as VAddr);
-                page_boundary_crossed = (indirect_address & 0xFF00) != (vaddr & 0xFF00);
+                let addr = self.read_addr(indirect_address);
+                vaddr = addr + (self.state.Y as VAddr);
+                page_boundary_crossed = (addr & 0xFF00) != (vaddr & 0xFF00);
             }
             _ => { error!("Impossible match"); }
         }
