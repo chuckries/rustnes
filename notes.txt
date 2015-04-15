@@ -2,3 +2,7 @@ Thought for later refactor: The mem module is unnecessary. I could give cpu.rs t
 Then do the virtual_address decoding in the read/write functions in cpu.rs.
 
 This would make testing much easier. Maybe I should just do it now. 
+
+
+
+test
